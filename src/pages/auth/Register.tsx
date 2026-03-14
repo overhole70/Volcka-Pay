@@ -26,18 +26,18 @@ export const Register: React.FC = () => {
     setError('');
 
     try {
-      // 1. Register user with Supabase Auth (Backend handles Firestore profile creation)
-      const { data, error: authError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            full_name: fullName,
-          }
-        }
+      // 1. Register user via backend API (Handles Auth + Firestore profile creation in one request)
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, fullName }),
       });
-
-      if (authError) throw authError;
+      
+      const data = await res.json();
+      
+      if (!res.ok || data.error) {
+        throw new Error(data.error || 'حدث خطأ أثناء التسجيل');
+      }
 
       if (data.user) {
         // 2. Redirect to confirmation screen immediately
