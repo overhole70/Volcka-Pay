@@ -26,39 +26,51 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (docSnap.exists()) {
         const userData = docSnap.data() as UserProfile;
         
-        // Check if user is admin based on settings
-        try {
-          const settingsDoc = await getDoc(doc(db, 'settings', 'app_settings'));
-          if (settingsDoc.exists()) {
-            const settings = settingsDoc.data();
-            if (settings.adminEmail && userData.email === settings.adminEmail) {
-              userData.role = 'admin';
-            }
-          } else if (userData.email === 'volckastudio@gmail.com') {
-            userData.role = 'admin';
-          }
-        } catch (e) {
-          console.error("Error fetching settings for admin check:", e);
-          if (userData.email === 'volckastudio@gmail.com') {
-            userData.role = 'admin';
-          }
-        }
-        
+        // Essential data loaded, set profile immediately
         setProfile(userData);
+        setLoading(false);
+
+        // Background task for non-essential data (admin check)
+        (async () => {
+          try {
+            const settingsDoc = await getDoc(doc(db, 'settings', 'app_settings'));
+            if (settingsDoc.exists()) {
+              const settings = settingsDoc.data();
+              if (settings.adminEmail && userData.email === settings.adminEmail) {
+                setProfile(prev => prev ? { ...prev, role: 'admin' } : null);
+              }
+            } else if (userData.email === 'volckastudio@gmail.com') {
+              setProfile(prev => prev ? { ...prev, role: 'admin' } : null);
+            }
+          } catch (e) {
+            console.error("Error fetching settings for admin check:", e);
+            if (userData.email === 'volckastudio@gmail.com') {
+              setProfile(prev => prev ? { ...prev, role: 'admin' } : null);
+            }
+          }
+        })();
       } else {
         setProfile(null);
+        setLoading(false);
       }
     } catch (error) {
       console.error("Error fetching profile:", error);
+      setLoading(false);
     }
   };
 
   useEffect(() => {
+    let mounted = true;
+
     // Check active sessions and sets the user
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchProfile(session.user.id);
+      if (!mounted) return;
+      
+      const currentUser = session?.user ?? null;
+      setUser(currentUser);
+      
+      if (currentUser) {
+        fetchProfile(currentUser.id);
       } else {
         setLoading(false);
       }
@@ -66,16 +78,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Listen for changes on auth state (logged in, signed out, etc.)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        await fetchProfile(session.user.id);
+      if (!mounted) return;
+
+      const currentUser = session?.user ?? null;
+      setUser(currentUser);
+      
+      if (currentUser) {
+        fetchProfile(currentUser.id);
       } else {
         setProfile(null);
+        setLoading(false);
       }
-      setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signOut = async () => {
@@ -90,7 +109,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   return (
     <AuthContext.Provider value={{ user, profile, loading, signOut, refreshProfile }}>
-      {!loading && children}
+      {loading ? (
+        <div className="fixed inset-0 flex flex-col items-center justify-center bg-white z-50">
+          <div className="w-16 h-16 border-4 border-gray-100 border-t-gray-900 rounded-full animate-spin mb-4"></div>
+          <p className="text-gray-500 font-bold animate-pulse">جاري التحميل...</p>
+        </div>
+      ) : (
+        children
+      )}
     </AuthContext.Provider>
   );
 };

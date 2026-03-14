@@ -26,7 +26,7 @@ export const Register: React.FC = () => {
     setError('');
 
     try {
-      // 1. Register user with Supabase Auth
+      // 1. Register user with Supabase Auth (Backend handles Firestore profile creation)
       const { data, error: authError } = await supabase.auth.signUp({
         email,
         password,
@@ -40,20 +40,7 @@ export const Register: React.FC = () => {
       if (authError) throw authError;
 
       if (data.user) {
-        // 2. Generate unique 10-digit ID
-        const volckaId = await generateUniqueVolckaId();
-
-        // 3. Create user profile in Firestore
-        await setDoc(doc(db, 'users', data.user.id), {
-          uid: data.user.id,
-          volckaId,
-          email: data.user.email,
-          fullName,
-          balance: 0,
-          createdAt: new Date().toISOString(),
-        });
-
-        // 4. Redirect to confirmation screen
+        // 2. Redirect to confirmation screen immediately
         navigate('/confirm-email', { state: { email, password } });
       }
     } catch (err: any) {

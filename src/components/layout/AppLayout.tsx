@@ -18,10 +18,6 @@ export const AppLayout: React.FC = () => {
     { to: '/settings', icon: Settings, label: 'الإعدادات' },
   ];
 
-  if (profile?.role === 'admin') {
-    navItems.push({ to: '/admin', icon: ShieldAlert, label: 'لوحة التحكم' });
-  }
-
   const displayName = profile?.fullName || profile?.email || 'User';
 
   return (

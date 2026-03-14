@@ -8,27 +8,55 @@ export const supabase = {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       });
-      return await res.json();
+      const json = await res.json();
+      if (!res.ok || json.error) return { data: { user: null, session: null }, error: { message: json.error || 'Login failed' } };
+      
+      if (json.user) {
+        localStorage.setItem('supabase.auth.token', JSON.stringify(json));
+      }
+      // Trigger auth state change manually since we're mocking
+      window.dispatchEvent(new CustomEvent('supabase.auth.change', { detail: json }));
+      
+      return { data: json, error: null };
     },
     signUp: async ({ email, password, options }: any) => {
+      const fullName = options?.data?.full_name || options?.data?.fullName || 'مستخدم';
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, fullName: options?.data?.fullName }),
+        body: JSON.stringify({ email, password, fullName }),
       });
-      return await res.json();
+      const json = await res.json();
+      if (!res.ok || json.error) return { data: { user: null, session: null }, error: { message: json.error || 'Registration failed' } };
+      
+      if (json.user) {
+        localStorage.setItem('supabase.auth.token', JSON.stringify(json));
+      }
+      window.dispatchEvent(new CustomEvent('supabase.auth.change', { detail: json }));
+      
+      return { data: json, error: null };
     },
     signOut: async () => {
-      // In a real app, we would clear the session on the server too
       localStorage.removeItem('supabase.auth.token');
+      window.dispatchEvent(new CustomEvent('supabase.auth.change', { detail: null }));
     },
     getSession: async () => {
-      // Mock session for now
+      const stored = localStorage.getItem('supabase.auth.token');
+      if (stored) {
+        try {
+          return { data: { session: JSON.parse(stored) } };
+        } catch (e) {
+          return { data: { session: null } };
+        }
+      }
       return { data: { session: null } };
     },
     onAuthStateChange: (callback: any) => {
-      // Mock subscription
-      return { data: { subscription: { unsubscribe: () => {} } } };
+      const handler = (e: any) => {
+        callback('SIGNED_IN', e.detail);
+      };
+      window.addEventListener('supabase.auth.change', handler);
+      return { data: { subscription: { unsubscribe: () => window.removeEventListener('supabase.auth.change', handler) } } };
     },
     refreshSession: async () => {
       return { data: { session: null }, error: null };

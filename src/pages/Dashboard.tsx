@@ -86,37 +86,28 @@ export const Dashboard: React.FC = () => {
       </div>
 
       {/* Action Buttons */}
-      <div className="grid grid-cols-4 gap-2 md:gap-4 mb-8">
+      <div className="grid grid-cols-3 gap-2 md:gap-4 mb-8">
         <Link 
           to="/transfer" 
-          className="flex flex-col items-center justify-center gap-2 group"
+          className="flex flex-col items-center justify-center gap-2 group active:scale-95 transition-transform duration-200"
         >
           <div className="w-14 h-14 md:w-16 md:h-16 bg-white rounded-full flex items-center justify-center text-indigo-600 shadow-sm border border-gray-100 group-hover:bg-indigo-50 transition-colors">
             <ArrowUpRight size={24} className="md:w-7 md:h-7" />
           </div>
           <span className="font-bold text-xs md:text-sm text-gray-700">إرسال</span>
         </Link>
-        <button 
-          onClick={handleCopy}
-          className="flex flex-col items-center justify-center gap-2 group"
-        >
-          <div className="w-14 h-14 md:w-16 md:h-16 bg-white rounded-full flex items-center justify-center text-emerald-600 shadow-sm border border-gray-100 group-hover:bg-emerald-50 transition-colors">
-            <ArrowDownLeft size={24} className="md:w-7 md:h-7" />
-          </div>
-          <span className="font-bold text-xs md:text-sm text-gray-700">استلام</span>
-        </button>
         <Link 
           to="/transactions" 
-          className="flex flex-col items-center justify-center gap-2 group"
+          className="flex flex-col items-center justify-center gap-2 group active:scale-95 transition-transform duration-200"
         >
           <div className="w-14 h-14 md:w-16 md:h-16 bg-white rounded-full flex items-center justify-center text-blue-600 shadow-sm border border-gray-100 group-hover:bg-blue-50 transition-colors">
             <List size={24} className="md:w-7 md:h-7" />
           </div>
-          <span className="font-bold text-xs md:text-sm text-gray-700">سجل المعاملات</span>
+          <span className="font-bold text-xs md:text-sm text-gray-700">المعاملات</span>
         </Link>
         <Link 
           to="/deposit" 
-          className="flex flex-col items-center justify-center gap-2 group"
+          className="flex flex-col items-center justify-center gap-2 group active:scale-95 transition-transform duration-200"
         >
           <div className="w-14 h-14 md:w-16 md:h-16 bg-white rounded-full flex items-center justify-center text-purple-600 shadow-sm border border-gray-100 group-hover:bg-purple-50 transition-colors">
             <Wallet size={24} className="md:w-7 md:h-7" />

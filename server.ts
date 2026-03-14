@@ -59,12 +59,15 @@ async function startServer() {
     
     // Create profile in Firestore if user created
     if (data.user && db) {
+      // Fast 10-digit ID generation
+      const volckaId = Math.floor(1000000000 + Math.random() * 9000000000).toString();
+      
       await db.collection("users").doc(data.user.id).set({
         uid: data.user.id,
         email,
-        fullName,
+        fullName: fullName || 'مستخدم',
         balance: 0,
-        volckaId: Math.random().toString(36).substring(2, 10).toUpperCase(),
+        volckaId,
         createdAt: new Date().toISOString(),
       });
     }
@@ -96,6 +99,17 @@ async function startServer() {
     }
   });
 
+  app.post("/api/firestore/:collection", async (req, res) => {
+    if (!db) return res.status(500).json({ error: "Firebase not configured" });
+    const { collection } = req.params;
+    try {
+      const docRef = await db.collection(collection).add(req.body);
+      res.json({ id: docRef.id, success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.get("/api/firestore/:collection", async (req, res) => {
     if (!db) return res.status(500).json({ error: "Firebase not configured" });
     const { collection } = req.params;
@@ -108,7 +122,80 @@ async function startServer() {
     }
   });
 
-  // Add more endpoints as needed based on app functionality...
+  // OTP Endpoints
+  app.post("/api/otp/generate", async (req, res) => {
+    if (!db) return res.status(500).json({ error: "Firebase not configured" });
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: "Email is required" });
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString(); // 5 minutes
+
+    try {
+      // Store OTP in Firestore
+      await db.collection("otps").doc(email).set({
+        email,
+        code: otp,
+        expiresAt,
+        verified: false,
+        createdAt: new Date().toISOString(),
+      });
+
+      // Send via EmailJS
+      const emailJsData = {
+        service_id: process.env.EMAILJS_SERVICE_ID,
+        template_id: process.env.EMAILJS_TEMPLATE_ID,
+        user_id: process.env.EMAILJS_PUBLIC_KEY,
+        template_params: {
+          to_email: email,
+          passcode: otp,
+          time: "5 minutes",
+        },
+      };
+
+      const emailResponse = await fetch("https://api.emailjs.com/api/v1.0/email/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(emailJsData),
+      });
+
+      if (!emailResponse.ok) {
+        const errorText = await emailResponse.text();
+        console.error("EmailJS Error:", errorText);
+        return res.status(500).json({ error: "Failed to send email" });
+      }
+
+      res.json({ success: true, message: "OTP sent successfully" });
+    } catch (error: any) {
+      console.error("OTP Generate Error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/otp/verify", async (req, res) => {
+    if (!db) return res.status(500).json({ error: "Firebase not configured" });
+    const { email, code } = req.body;
+    if (!email || !code) return res.status(400).json({ error: "Email and code are required" });
+
+    try {
+      const otpDoc = await db.collection("otps").doc(email).get();
+      if (!otpDoc.exists) return res.status(400).json({ error: "No OTP found for this email" });
+
+      const otpData = otpDoc.data();
+      if (otpData.verified) return res.status(400).json({ error: "OTP already used" });
+      if (new Date() > new Date(otpData.expiresAt)) return res.status(400).json({ error: "OTP expired" });
+      if (otpData.code !== code) return res.status(400).json({ error: "Invalid OTP code" });
+
+      // Mark as verified or delete
+      await db.collection("otps").doc(email).update({ verified: true });
+      // Alternatively, delete it: await db.collection("otps").doc(email).delete();
+
+      res.json({ success: true, message: "OTP verified successfully" });
+    } catch (error: any) {
+      console.error("OTP Verify Error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
 
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {

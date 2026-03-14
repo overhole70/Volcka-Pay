@@ -10,10 +10,12 @@ export const collection = (db: any, name: string) => {
 };
 
 export const doc = (dbOrColl: any, nameOrId?: string, id?: string) => {
+  const generateId = () => Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+  
   if (dbOrColl.type === 'collection') {
-    return { type: 'doc', collection: dbOrColl.name, id: nameOrId };
+    return { type: 'doc', collection: dbOrColl.name, id: nameOrId || generateId() };
   }
-  return { type: 'doc', collection: nameOrId, id };
+  return { type: 'doc', collection: nameOrId, id: id || generateId() };
 };
 
 export const getDoc = async (docRef: any) => {

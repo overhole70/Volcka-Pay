@@ -20,6 +20,7 @@ import { Earnings } from './pages/Earnings';
 import { Account } from './pages/Account';
 
 import { Settings } from './pages/Settings';
+import { Support } from './pages/Support';
 import { Deposit } from './pages/Deposit';
 import { AdminDashboard } from './pages/AdminDashboard';
 
@@ -42,6 +43,7 @@ export default function App() {
             <Route path="/earnings" element={<Earnings />} />
             <Route path="/account" element={<Account />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/settings/support" element={<Support />} />
             <Route path="/deposit" element={<Deposit />} />
             <Route path="/admin" element={<AdminDashboard />} />
           </Route>

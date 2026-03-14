@@ -1,39 +1,33 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { Settings as SettingsIcon, Shield, Bell, Key, Globe, HelpCircle, LogOut } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Settings as SettingsIcon, Shield, Bell, Key, Globe, HelpCircle, LogOut, ShieldAlert, ChevronLeft } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
+import { supabase } from '../lib/supabase';
 
 export const Settings: React.FC = () => {
   const { profile, signOut } = useAuth();
   const navigate = useNavigate();
+  const [resetSent, setResetSent] = useState(false);
 
   const handleLogout = async () => {
     await signOut();
-    navigate('/login');
+    window.location.href = '/login';
   };
 
-  const settingsGroups = [
-    {
-      title: 'الحساب',
-      items: [
-        { icon: Shield, label: 'الأمان والخصوصية', onClick: () => {} },
-        { icon: Key, label: 'تغيير كلمة المرور', onClick: () => {} },
-      ]
-    },
-    {
-      title: 'التفضيلات',
-      items: [
-        { icon: Bell, label: 'الإشعارات', onClick: () => {} },
-        { icon: Globe, label: 'اللغة', onClick: () => {} },
-      ]
-    },
-    {
-      title: 'الدعم',
-      items: [
-        { icon: HelpCircle, label: 'مركز المساعدة', onClick: () => {} },
-      ]
+  const handlePasswordReset = async () => {
+    if (!profile?.email) return;
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(profile.email, {
+        redirectTo: `${window.location.origin}/settings`,
+      });
+      if (error) throw error;
+      setResetSent(true);
+      setTimeout(() => setResetSent(false), 5000);
+    } catch (error) {
+      console.error('Error sending password reset:', error);
+      alert('حدث خطأ أثناء إرسال رابط إعادة تعيين كلمة المرور');
     }
-  ];
+  };
 
   return (
     <div className="max-w-2xl mx-auto pt-2 md:pt-6 pb-20">
@@ -60,35 +54,67 @@ export const Settings: React.FC = () => {
       </div>
 
       <div className="space-y-6">
-        {settingsGroups.map((group, index) => (
-          <div key={index}>
-            <h3 className="text-sm font-bold text-gray-400 mb-3 px-4">{group.title}</h3>
+        {profile?.role === 'admin' && (
+          <div>
+            <h3 className="text-sm font-bold text-gray-400 mb-3 px-4">الإدارة</h3>
             <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
-              <div className="divide-y divide-gray-50">
-                {group.items.map((item, itemIndex) => (
-                  <button
-                    key={itemIndex}
-                    onClick={item.onClick}
-                    className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors text-right"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-600">
-                        <item.icon size={20} />
-                      </div>
-                      <span className="font-bold text-gray-900">{item.label}</span>
-                    </div>
-                  </button>
-                ))}
-              </div>
+              <Link
+                to="/admin"
+                className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-all active:scale-[0.98] text-right"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600">
+                    <ShieldAlert size={20} />
+                  </div>
+                  <span className="font-bold text-gray-900">لوحة التحكم</span>
+                </div>
+                <ChevronLeft size={20} className="text-gray-400" />
+              </Link>
             </div>
           </div>
-        ))}
+        )}
+
+        <div>
+          <h3 className="text-sm font-bold text-gray-400 mb-3 px-4">إعدادات الأمان</h3>
+          <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden p-5">
+            <div className="mb-4">
+              <p className="text-sm text-gray-500 font-medium mb-1">البريد الإلكتروني المسجل</p>
+              <p className="font-bold text-gray-900" dir="ltr">{profile?.email}</p>
+            </div>
+            <button
+              onClick={handlePasswordReset}
+              disabled={resetSent}
+              className="w-full flex items-center justify-center gap-2 p-3 bg-gray-50 hover:bg-gray-100 text-gray-900 rounded-xl font-bold transition-all active:scale-95 disabled:opacity-50"
+            >
+              <Key size={18} />
+              {resetSent ? 'تم إرسال الرابط بنجاح' : 'تغيير كلمة المرور'}
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <h3 className="text-sm font-bold text-gray-400 mb-3 px-4">الدعم</h3>
+          <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+            <Link
+              to="/settings/support"
+              className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-all active:scale-[0.98] text-right"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-600">
+                  <HelpCircle size={20} />
+                </div>
+                <span className="font-bold text-gray-900">المساعدة والدعم</span>
+              </div>
+              <ChevronLeft size={20} className="text-gray-400" />
+            </Link>
+          </div>
+        </div>
 
         <div>
           <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
             <button
               onClick={handleLogout}
-              className="w-full flex items-center justify-between p-4 hover:bg-red-50 transition-colors text-right group"
+              className="w-full flex items-center justify-between p-4 hover:bg-red-50 transition-all active:scale-[0.98] text-right group"
             >
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-red-50 rounded-xl flex items-center justify-center text-red-600 group-hover:bg-red-100 transition-colors">

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { db, collection, addDoc, doc, getDoc } from '../lib/firebase';
 import { Wallet, Copy, CheckCircle2, Clock, Upload } from 'lucide-react';
+import { OTPModal } from '../components/OTPModal';
 
 export const Deposit: React.FC = () => {
   const { profile } = useAuth();
@@ -11,6 +12,7 @@ export const Deposit: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
+  const [showOTP, setShowOTP] = useState(false);
 
   const [formData, setFormData] = useState({
     binanceName: '',
@@ -42,7 +44,7 @@ export const Deposit: React.FC = () => {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleDepositInitiate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!profile) return;
 
@@ -50,6 +52,62 @@ export const Deposit: React.FC = () => {
     setError('');
 
     try {
+      // Generate and send OTP
+      const res = await fetch('/api/otp/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: profile.email }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'فشل إرسال رمز التحقق');
+      }
+
+      setShowOTP(true);
+    } catch (err: any) {
+      setError(err.message || 'حدث خطأ أثناء تقديم الطلب');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyOTP = async (code: string) => {
+    if (!profile) return;
+
+    const res = await fetch('/api/otp/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: profile.email, code }),
+    });
+
+    if (!res.ok) {
+      const data = await res.json();
+      throw new Error(data.error || 'رمز التحقق غير صحيح');
+    }
+
+    // OTP verified, proceed with deposit request
+    await executeDeposit();
+    setShowOTP(false);
+  };
+
+  const handleResendOTP = async () => {
+    if (!profile) return;
+    const res = await fetch('/api/otp/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: profile.email }),
+    });
+    if (!res.ok) {
+      const data = await res.json();
+      throw new Error(data.error || 'فشل إعادة إرسال الرمز');
+    }
+  };
+
+  const executeDeposit = async () => {
+    setLoading(true);
+    try {
+      if (!profile) return;
       await addDoc(collection(db, 'deposit_requests'), {
         userId: profile.uid,
         userVolckaId: profile.volckaId,
@@ -79,6 +137,13 @@ export const Deposit: React.FC = () => {
 
   return (
     <div className="max-w-2xl mx-auto pt-8 md:pt-12">
+      <OTPModal
+        isOpen={showOTP}
+        onClose={() => setShowOTP(false)}
+        onVerify={handleVerifyOTP}
+        onResend={handleResendOTP}
+        email={profile?.email || ''}
+      />
       <div className="mb-12">
         <h1 className="text-4xl font-black text-gray-900 tracking-tight mb-2">إيداع الأموال</h1>
         <p className="text-gray-500 font-medium">قم بإيداع الأموال في حسابك عبر Binance</p>
@@ -138,7 +203,7 @@ export const Deposit: React.FC = () => {
                 تقديم طلب الإيداع
               </button>
             ) : (
-              <form onSubmit={handleSubmit} className="space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <form onSubmit={handleDepositInitiate} className="space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <div className="pt-4 border-t border-gray-100">
                   <h3 className="text-lg font-bold text-gray-900 mb-6">تفاصيل التحويل</h3>
                   

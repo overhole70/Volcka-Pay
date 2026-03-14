@@ -45,7 +45,7 @@ export const Account: React.FC = () => {
 
       <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden mb-6">
         <div className="divide-y divide-gray-50">
-          <Link to="/transactions" className="flex items-center justify-between p-5 hover:bg-gray-50 transition-colors">
+          <Link to="/transactions" className="flex items-center justify-between p-5 hover:bg-gray-50 transition-all active:scale-[0.98]">
             <div className="flex items-center gap-4">
               <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600">
                 <Clock size={20} />
@@ -53,7 +53,7 @@ export const Account: React.FC = () => {
               <span className="font-bold text-gray-900">سجل العمليات</span>
             </div>
           </Link>
-          <Link to="/ads" className="flex items-center justify-between p-5 hover:bg-gray-50 transition-colors">
+          <Link to="/ads" className="flex items-center justify-between p-5 hover:bg-gray-50 transition-all active:scale-[0.98]">
             <div className="flex items-center gap-4">
               <div className="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600">
                 <MonitorPlay size={20} />
@@ -61,28 +61,31 @@ export const Account: React.FC = () => {
               <span className="font-bold text-gray-900">الإعلانات</span>
             </div>
           </Link>
-          <button className="w-full flex items-center justify-between p-5 hover:bg-gray-50 transition-colors">
+          <Link to="/settings" className="w-full flex items-center justify-between p-5 hover:bg-gray-50 transition-all active:scale-[0.98]">
             <div className="flex items-center gap-4">
               <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-600">
                 <Settings size={20} />
               </div>
               <span className="font-bold text-gray-900">الإعدادات</span>
             </div>
-          </button>
-          <button className="w-full flex items-center justify-between p-5 hover:bg-gray-50 transition-colors">
+          </Link>
+          <Link to="/settings/support" className="w-full flex items-center justify-between p-5 hover:bg-gray-50 transition-all active:scale-[0.98]">
             <div className="flex items-center gap-4">
               <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-600">
                 <HelpCircle size={20} />
               </div>
               <span className="font-bold text-gray-900">المساعدة والدعم</span>
             </div>
-          </button>
+          </Link>
         </div>
       </div>
 
       <button
-        onClick={() => signOut()}
-        className="w-full flex items-center justify-center gap-3 p-5 bg-red-50 text-red-600 rounded-3xl font-bold hover:bg-red-100 transition-colors"
+        onClick={async () => {
+          await signOut();
+          window.location.href = '/login';
+        }}
+        className="w-full flex items-center justify-center gap-3 p-5 bg-red-50 text-red-600 rounded-3xl font-bold hover:bg-red-100 transition-all active:scale-95"
       >
         <LogOut size={20} />
         تسجيل الخروج

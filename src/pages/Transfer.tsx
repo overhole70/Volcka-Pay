@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { db, collection, query, where, getDocs, runTransaction, doc, serverTimestamp } from '../lib/firebase';
 import { useNavigate } from 'react-router-dom';
 import { Send } from 'lucide-react';
+import { OTPModal } from '../components/OTPModal';
 
 export const Transfer: React.FC = () => {
   const { profile, refreshProfile } = useAuth();
@@ -11,9 +12,10 @@ export const Transfer: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [showOTP, setShowOTP] = useState(false);
   const navigate = useNavigate();
 
-  const handleTransfer = async (e: React.FormEvent) => {
+  const handleTransferInitiate = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
@@ -51,6 +53,66 @@ export const Transfer: React.FC = () => {
         return;
       }
 
+      // Generate and send OTP
+      const res = await fetch('/api/otp/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: profile.email }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'فشل إرسال رمز التحقق');
+      }
+
+      setShowOTP(true);
+    } catch (err: any) {
+      setError(err.message || 'حدث خطأ أثناء التحويل');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyOTP = async (code: string) => {
+    if (!profile) return;
+
+    const res = await fetch('/api/otp/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: profile.email, code }),
+    });
+
+    if (!res.ok) {
+      const data = await res.json();
+      throw new Error(data.error || 'رمز التحقق غير صحيح');
+    }
+
+    // OTP verified, proceed with transfer
+    await executeTransfer();
+    setShowOTP(false);
+  };
+
+  const handleResendOTP = async () => {
+    if (!profile) return;
+    const res = await fetch('/api/otp/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: profile.email }),
+    });
+    if (!res.ok) {
+      const data = await res.json();
+      throw new Error(data.error || 'فشل إعادة إرسال الرمز');
+    }
+  };
+
+  const executeTransfer = async () => {
+    setLoading(true);
+    try {
+      if (!profile) return;
+      const transferAmount = parseFloat(amount);
+
+      const q = query(collection(db, 'users'), where('volckaId', '==', receiverId));
+      const querySnapshot = await getDocs(q);
       const receiverDoc = querySnapshot.docs[0];
       const receiverData = receiverDoc.data();
 
@@ -99,7 +161,6 @@ export const Transfer: React.FC = () => {
       setTimeout(() => {
         navigate('/');
       }, 2000);
-
     } catch (err: any) {
       setError(err.message || 'حدث خطأ أثناء التحويل');
     } finally {
@@ -109,6 +170,13 @@ export const Transfer: React.FC = () => {
 
   return (
     <div className="max-w-2xl mx-auto pt-8 md:pt-12">
+      <OTPModal
+        isOpen={showOTP}
+        onClose={() => setShowOTP(false)}
+        onVerify={handleVerifyOTP}
+        onResend={handleResendOTP}
+        email={profile?.email || ''}
+      />
       <div className="mb-12">
         <h1 className="text-4xl font-black text-gray-900 tracking-tight mb-2">إرسال أموال</h1>
         <p className="text-gray-500 font-medium">قم بتحويل الأموال فوراً لأي حساب VolckaPay</p>
@@ -126,7 +194,7 @@ export const Transfer: React.FC = () => {
         </div>
       )}
 
-      <form onSubmit={handleTransfer} className="space-y-8">
+      <form onSubmit={handleTransferInitiate} className="space-y-8">
         <div>
           <label className="block text-sm font-bold text-gray-900 mb-3">رقم حساب المستلم (10 أرقام)</label>
           <input

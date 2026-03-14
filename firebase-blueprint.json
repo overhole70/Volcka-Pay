@@ -1,0 +1,59 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "User account information and balance",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "fullName": { "type": "string" },
+        "balance": { "type": "number" },
+        "volckaId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "balance", "volckaId"]
+    },
+    "Transaction": {
+      "title": "Transaction",
+      "description": "Record of money transfer",
+      "type": "object",
+      "properties": {
+        "senderId": { "type": "string" },
+        "receiverId": { "type": "string" },
+        "amount": { "type": "number" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["completed", "pending", "failed"] },
+        "type": { "type": "string", "enum": ["transfer", "deposit", "withdrawal"] }
+      },
+      "required": ["senderId", "receiverId", "amount", "timestamp", "status", "type"]
+    },
+    "OTP": {
+      "title": "OTP",
+      "description": "One-Time Password for verification",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "format": "email" },
+        "code": { "type": "string" },
+        "expiresAt": { "type": "string", "format": "date-time" },
+        "verified": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["email", "code", "expiresAt", "verified"]
+    }
+  },
+  "firestore": {
+    "/users/{uid}": {
+      "schema": "UserProfile",
+      "description": "User profiles"
+    },
+    "/transactions/{txId}": {
+      "schema": "Transaction",
+      "description": "Financial transactions"
+    },
+    "/otps/{email}": {
+      "schema": "OTP",
+      "description": "One-time passwords"
+    }
+  }
+}
