@@ -77,8 +77,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     // Listen for changes on auth state (logged in, signed out, etc.)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!mounted) return;
+
+      if (event === 'SIGNED_OUT') {
+        sessionStorage.removeItem('otpVerified');
+      }
 
       const currentUser = session?.user ?? null;
       setUser(currentUser);
@@ -98,6 +102,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const signOut = async () => {
+    sessionStorage.removeItem('otpVerified');
     await supabase.auth.signOut();
   };
 

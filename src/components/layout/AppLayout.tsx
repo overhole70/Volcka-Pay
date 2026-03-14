@@ -9,6 +9,9 @@ export const AppLayout: React.FC = () => {
   if (loading) return <div className="min-h-screen flex items-center justify-center">جاري التحميل...</div>;
   if (!user) return <Navigate to="/login" replace />;
   if (user && !user.email_confirmed_at) return <Navigate to="/confirm-email" replace />;
+  if (profile?.requiresOtpOnLogin && sessionStorage.getItem('otpVerified') !== 'true') {
+    return <Navigate to="/verify-login-otp" replace />;
+  }
 
   const navItems = [
     { to: '/', icon: Home, label: 'الرئيسية' },

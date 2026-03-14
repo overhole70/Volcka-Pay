@@ -26,21 +26,35 @@ export const Register: React.FC = () => {
     setError('');
 
     try {
-      // 1. Register user via backend API (Handles Auth + Firestore profile creation in one request)
-      const res = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, fullName }),
+      // 1. Register user via Supabase client directly (only once)
+      const { data, error } = await supabase.auth.signUp({ 
+        email, 
+        password,
+        options: {
+          data: {
+            full_name: fullName,
+          }
+        }
       });
       
-      const data = await res.json();
-      
-      if (!res.ok || data.error) {
-        throw new Error(data.error || 'حدث خطأ أثناء التسجيل');
+      if (error) {
+        throw new Error(error.message || 'حدث خطأ أثناء التسجيل');
       }
 
+      // 2. Create profile in Firestore asynchronously (DO NOT AWAIT)
       if (data.user) {
-        // 2. Redirect to confirmation screen immediately
+        const volckaId = Math.floor(1000000000 + Math.random() * 9000000000).toString();
+        
+        setDoc(doc(db, 'users', data.user.id), {
+          uid: data.user.id,
+          email,
+          fullName: fullName || 'مستخدم',
+          balance: 0,
+          volckaId,
+          createdAt: new Date().toISOString(),
+        }).catch(err => console.error("Async profile creation error:", err));
+        
+        // 3. Redirect to confirmation screen immediately
         navigate('/confirm-email', { state: { email, password } });
       }
     } catch (err: any) {

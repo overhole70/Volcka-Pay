@@ -14,22 +14,29 @@ export const Login: React.FC = () => {
     setLoading(true);
     setError('');
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (error) {
-      if (error.message.includes('Email not confirmed')) {
-        navigate('/confirm-email', { state: { email, password } });
-      } else if (error.message.includes('Invalid login credentials')) {
-        setError('بيانات الدخول غير صحيحة');
-      } else {
-        setError(error.message);
+    try {
+      // 1. Execute Supabase login directly on client (only once)
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      
+      if (error) {
+        if (error.message.includes('Email not confirmed')) {
+          navigate('/confirm-email', { state: { email, password } });
+        } else if (error.message.includes('Invalid login credentials')) {
+          setError('بيانات الدخول غير صحيحة');
+        } else {
+          setError(error.message || 'حدث خطأ أثناء تسجيل الدخول');
+        }
+        setLoading(false);
+        return;
       }
+
+      // 2. Redirect immediately after successful login
+      if (data.session) {
+        navigate('/');
+      }
+    } catch (err: any) {
+      setError(err.message || 'حدث خطأ غير متوقع');
       setLoading(false);
-    } else {
-      navigate('/');
     }
   };
 

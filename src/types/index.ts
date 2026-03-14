@@ -7,6 +7,7 @@ export interface UserProfile {
   createdAt: string;
   role?: 'admin' | 'user';
   isBanned?: boolean;
+  requiresOtpOnLogin?: boolean;
 }
 
 export interface Transaction {

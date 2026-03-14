@@ -43,36 +43,88 @@ async function startServer() {
   });
 
   // Auth Endpoints
-  app.post("/api/auth/login", async (req, res) => {
-    if (!supabase) return res.status(500).json({ error: "Supabase not configured" });
-    const { email, password } = req.body;
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) return res.status(400).json({ error: error.message });
-    res.json(data);
+  app.post("/api/auth/send-otp", async (req, res) => {
+    if (!db) return res.status(500).json({ error: "Server not configured" });
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: "Missing email" });
+
+    try {
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString(); // 5 minutes
+      
+      // Store OTP in Firestore asynchronously
+      db.collection("otps").doc(email).set({
+        email,
+        code: otp,
+        expiresAt,
+        verified: false,
+        createdAt: new Date().toISOString(),
+      }).catch(console.error);
+      
+      // Send via EmailJS
+      const emailJsData = {
+        service_id: process.env.EMAILJS_SERVICE_ID || "service_fnlf5he",
+        template_id: process.env.EMAILJS_TEMPLATE_ID || "template_kjsflkf",
+        user_id: process.env.EMAILJS_PUBLIC_KEY || "1OdM68bcwaNhA0RZv",
+        template_params: {
+          to_email: email,
+          email: email,
+          user_email: email,
+          passcode: otp,
+          time: "5 minutes",
+        },
+      };
+      
+      // Send email asynchronously
+      fetch("https://api.emailjs.com/api/v1.0/email/send", {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          "Origin": "http://localhost:3000"
+        },
+        body: JSON.stringify(emailJsData),
+      })
+      .then(async (response) => {
+        if (!response.ok) {
+          const text = await response.text();
+          console.error("EmailJS Error:", response.status, text);
+        } else {
+          console.log("OTP email sent successfully to", email);
+        }
+      })
+      .catch((error) => {
+        console.error("EmailJS Fetch Error:", error);
+      });
+
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Send OTP Error:", error);
+      res.status(500).json({ error: error.message });
+    }
   });
 
-  app.post("/api/auth/register", async (req, res) => {
-    if (!supabase) return res.status(500).json({ error: "Supabase not configured" });
-    const { email, password, fullName } = req.body;
-    const { data, error } = await supabase.auth.signUp({ email, password });
-    if (error) return res.status(400).json({ error: error.message });
-    
-    // Create profile in Firestore if user created
-    if (data.user && db) {
-      // Fast 10-digit ID generation
-      const volckaId = Math.floor(1000000000 + Math.random() * 9000000000).toString();
-      
-      await db.collection("users").doc(data.user.id).set({
-        uid: data.user.id,
-        email,
-        fullName: fullName || 'مستخدم',
-        balance: 0,
-        volckaId,
-        createdAt: new Date().toISOString(),
-      });
+  app.post("/api/auth/verify-otp-only", async (req, res) => {
+    if (!db) return res.status(500).json({ error: "Server not configured" });
+    const { email, code } = req.body;
+    if (!email || !code) return res.status(400).json({ error: "Missing required fields" });
+
+    try {
+      const otpDoc = await db.collection("otps").doc(email).get();
+      if (!otpDoc.exists) return res.status(400).json({ error: "No OTP found for this email" });
+
+      const otpData = otpDoc.data();
+      if (otpData?.verified) return res.status(400).json({ error: "OTP already used" });
+      if (new Date() > new Date(otpData?.expiresAt)) return res.status(400).json({ error: "OTP expired" });
+      if (otpData?.code !== code) return res.status(400).json({ error: "Invalid OTP code" });
+
+      // Mark as verified
+      await db.collection("otps").doc(email).update({ verified: true });
+
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("OTP Verify Error:", error);
+      res.status(500).json({ error: error.message });
     }
-    
-    res.json(data);
   });
 
   // Firestore Endpoints (Proxy)
@@ -143,11 +195,13 @@ async function startServer() {
 
       // Send via EmailJS
       const emailJsData = {
-        service_id: process.env.EMAILJS_SERVICE_ID,
-        template_id: process.env.EMAILJS_TEMPLATE_ID,
-        user_id: process.env.EMAILJS_PUBLIC_KEY,
+        service_id: process.env.EMAILJS_SERVICE_ID || "service_fnlf5he",
+        template_id: process.env.EMAILJS_TEMPLATE_ID || "template_kjsflkf",
+        user_id: process.env.EMAILJS_PUBLIC_KEY || "1OdM68bcwaNhA0RZv",
         template_params: {
           to_email: email,
+          email: email,
+          user_email: email,
           passcode: otp,
           time: "5 minutes",
         },
@@ -155,7 +209,10 @@ async function startServer() {
 
       const emailResponse = await fetch("https://api.emailjs.com/api/v1.0/email/send", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Origin": "http://localhost:3000"
+        },
         body: JSON.stringify(emailJsData),
       });
 

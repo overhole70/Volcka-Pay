@@ -11,6 +11,7 @@ import { AppLayout } from './components/layout/AppLayout';
 import { Login } from './pages/auth/Login';
 import { Register } from './pages/auth/Register';
 import { ConfirmEmail } from './pages/auth/ConfirmEmail';
+import { VerifyLoginOtp } from './pages/auth/VerifyLoginOtp';
 import { Dashboard } from './pages/Dashboard';
 import { Transfer } from './pages/Transfer';
 import { Transactions } from './pages/Transactions';
@@ -20,6 +21,7 @@ import { Earnings } from './pages/Earnings';
 import { Account } from './pages/Account';
 
 import { Settings } from './pages/Settings';
+import { SecuritySettings } from './pages/SecuritySettings';
 import { Support } from './pages/Support';
 import { Deposit } from './pages/Deposit';
 import { AdminDashboard } from './pages/AdminDashboard';
@@ -33,6 +35,7 @@ export default function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/confirm-email" element={<ConfirmEmail />} />
+            <Route path="/verify-login-otp" element={<VerifyLoginOtp />} />
           </Route>
           <Route element={<AppLayout />}>
             <Route path="/" element={<Dashboard />} />
@@ -43,6 +46,7 @@ export default function App() {
             <Route path="/earnings" element={<Earnings />} />
             <Route path="/account" element={<Account />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/settings/security" element={<SecuritySettings />} />
             <Route path="/settings/support" element={<Support />} />
             <Route path="/deposit" element={<Deposit />} />
             <Route path="/admin" element={<AdminDashboard />} />
