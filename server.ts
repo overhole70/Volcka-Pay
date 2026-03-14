@@ -31,6 +31,39 @@ const supabaseUrl = process.env.SUPABASE_URL || "";
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || "";
 const supabase = (supabaseUrl && supabaseAnonKey) ? createClient(supabaseUrl, supabaseAnonKey) : null;
 
+// Helper to send OTP email via EmailJS
+async function sendOtpEmail(email: string, otp: string) {
+  const emailJsData = {
+    service_id: process.env.EMAILJS_SERVICE_ID || "service_fnlf5he",
+    template_id: process.env.EMAILJS_TEMPLATE_ID || "template_kjsflkf",
+    user_id: process.env.EMAILJS_PUBLIC_KEY || "1OdM68bcwaNhA0RZv",
+    template_params: {
+      to_email: email,
+      email: email,
+      user_email: email,
+      passcode: otp,
+      time: "5 minutes",
+    },
+  };
+
+  const response = await fetch("https://api.emailjs.com/api/v1.0/email/send", {
+    method: "POST",
+    headers: { 
+      "Content-Type": "application/json",
+      "Origin": "http://localhost:3000"
+    },
+    body: JSON.stringify(emailJsData),
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`EmailJS Error: ${response.status} ${text}`);
+  }
+  
+  console.log("OTP email sent successfully to", email);
+  return true;
+}
+
 async function startServer() {
   const app = express();
   const PORT = 3000;
@@ -49,52 +82,31 @@ async function startServer() {
     if (!email) return res.status(400).json({ error: "Missing email" });
 
     try {
+      // Check for recent OTP to prevent duplicates (30s cooldown)
+      const existingOtp = await db.collection("otps").doc(email).get();
+      if (existingOtp.exists) {
+        const data = existingOtp.data();
+        const lastSent = new Date(data?.createdAt || 0).getTime();
+        if (Date.now() - lastSent < 30000) {
+          console.log("OTP requested too soon for", email, "- skipping send");
+          return res.json({ success: true, message: "OTP already sent recently" });
+        }
+      }
+
       const otp = Math.floor(100000 + Math.random() * 900000).toString();
       const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString(); // 5 minutes
       
-      // Store OTP in Firestore asynchronously
-      db.collection("otps").doc(email).set({
+      // Store OTP in Firestore
+      await db.collection("otps").doc(email).set({
         email,
         code: otp,
         expiresAt,
         verified: false,
         createdAt: new Date().toISOString(),
-      }).catch(console.error);
-      
-      // Send via EmailJS
-      const emailJsData = {
-        service_id: process.env.EMAILJS_SERVICE_ID || "service_fnlf5he",
-        template_id: process.env.EMAILJS_TEMPLATE_ID || "template_kjsflkf",
-        user_id: process.env.EMAILJS_PUBLIC_KEY || "1OdM68bcwaNhA0RZv",
-        template_params: {
-          to_email: email,
-          email: email,
-          user_email: email,
-          passcode: otp,
-          time: "5 minutes",
-        },
-      };
-      
-      // Send email asynchronously
-      fetch("https://api.emailjs.com/api/v1.0/email/send", {
-        method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-          "Origin": "http://localhost:3000"
-        },
-        body: JSON.stringify(emailJsData),
-      })
-      .then(async (response) => {
-        if (!response.ok) {
-          const text = await response.text();
-          console.error("EmailJS Error:", response.status, text);
-        } else {
-          console.log("OTP email sent successfully to", email);
-        }
-      })
-      .catch((error) => {
-        console.error("EmailJS Fetch Error:", error);
       });
+      
+      // Send email
+      await sendOtpEmail(email, otp);
 
       res.json({ success: true });
     } catch (error: any) {
@@ -180,10 +192,21 @@ async function startServer() {
     const { email } = req.body;
     if (!email) return res.status(400).json({ error: "Email is required" });
 
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString(); // 5 minutes
-
     try {
+      // Check for recent OTP to prevent duplicates (30s cooldown)
+      const existingOtp = await db.collection("otps").doc(email).get();
+      if (existingOtp.exists) {
+        const data = existingOtp.data();
+        const lastSent = new Date(data?.createdAt || 0).getTime();
+        if (Date.now() - lastSent < 30000) {
+          console.log("OTP requested too soon for", email, "- skipping send");
+          return res.json({ success: true, message: "OTP already sent recently" });
+        }
+      }
+
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString(); // 5 minutes
+
       // Store OTP in Firestore
       await db.collection("otps").doc(email).set({
         email,
@@ -193,34 +216,8 @@ async function startServer() {
         createdAt: new Date().toISOString(),
       });
 
-      // Send via EmailJS
-      const emailJsData = {
-        service_id: process.env.EMAILJS_SERVICE_ID || "service_fnlf5he",
-        template_id: process.env.EMAILJS_TEMPLATE_ID || "template_kjsflkf",
-        user_id: process.env.EMAILJS_PUBLIC_KEY || "1OdM68bcwaNhA0RZv",
-        template_params: {
-          to_email: email,
-          email: email,
-          user_email: email,
-          passcode: otp,
-          time: "5 minutes",
-        },
-      };
-
-      const emailResponse = await fetch("https://api.emailjs.com/api/v1.0/email/send", {
-        method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-          "Origin": "http://localhost:3000"
-        },
-        body: JSON.stringify(emailJsData),
-      });
-
-      if (!emailResponse.ok) {
-        const errorText = await emailResponse.text();
-        console.error("EmailJS Error:", errorText);
-        return res.status(500).json({ error: "Failed to send email" });
-      }
+      // Send email
+      await sendOtpEmail(email, otp);
 
       res.json({ success: true, message: "OTP sent successfully" });
     } catch (error: any) {

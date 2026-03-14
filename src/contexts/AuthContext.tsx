@@ -81,7 +81,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (!mounted) return;
 
       if (event === 'SIGNED_OUT') {
-        sessionStorage.removeItem('otpVerified');
+        // Clear all user-specific OTP verifications
+        Object.keys(localStorage).forEach(key => {
+          if (key.startsWith('otpVerified_')) {
+            localStorage.removeItem(key);
+          }
+        });
       }
 
       const currentUser = session?.user ?? null;
@@ -102,7 +107,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const signOut = async () => {
-    sessionStorage.removeItem('otpVerified');
+    // Clear all user-specific OTP verifications
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith('otpVerified_')) {
+        localStorage.removeItem(key);
+      }
+    });
     await supabase.auth.signOut();
   };
 

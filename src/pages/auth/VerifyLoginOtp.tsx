@@ -8,6 +8,7 @@ export const VerifyLoginOtp: React.FC = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
+  const sentRef = useRef(false);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const navigate = useNavigate();
   const { user, profile, signOut } = useAuth();
@@ -18,18 +19,22 @@ export const VerifyLoginOtp: React.FC = () => {
       return;
     }
 
-    if (!profile.requiresOtpOnLogin || sessionStorage.getItem('otpVerified') === 'true') {
+    const storageKey = `otpVerified_${user.id}`;
+    if (!profile.requiresOtpOnLogin || localStorage.getItem(storageKey) === 'true') {
       navigate('/');
       return;
     }
 
-    if (!otpSent) {
+    if (!sentRef.current && !otpSent) {
+      sentRef.current = true;
       sendOtpEmail();
       setOtpSent(true);
     }
   }, [user, profile, navigate, otpSent]);
 
   const sendOtpEmail = async () => {
+    if (loading) return;
+    setLoading(true);
     try {
       await fetch('/api/auth/send-otp', {
         method: 'POST',
@@ -38,6 +43,8 @@ export const VerifyLoginOtp: React.FC = () => {
       });
     } catch (err) {
       console.error('Error sending OTP:', err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -120,8 +127,9 @@ export const VerifyLoginOtp: React.FC = () => {
         throw new Error(data.error || 'رمز التحقق غير صحيح');
       }
 
-      // Mark as verified in session storage
-      sessionStorage.setItem('otpVerified', 'true');
+      // Mark as verified in local storage tied to user ID
+      const storageKey = `otpVerified_${user.id}`;
+      localStorage.setItem(storageKey, 'true');
       navigate('/');
     } catch (err: any) {
       setError(err.message || 'حدث خطأ أثناء التحقق');
@@ -163,7 +171,7 @@ export const VerifyLoginOtp: React.FC = () => {
       )}
 
       <form onSubmit={handleVerify} className="space-y-8">
-        <div className="flex justify-between gap-2" dir="ltr">
+        <div className="flex justify-center gap-1.5" dir="ltr">
           {otp.map((digit, index) => (
             <input
               key={index}
