@@ -4,7 +4,7 @@ import { LogOut, Copy, User, Shield, Settings, HelpCircle, MonitorPlay, Clock } 
 import { Link } from 'react-router-dom';
 
 export const Account: React.FC = () => {
-  const { profile, signOut } = useAuth();
+  const { profile, signOut, loading: authLoading } = useAuth();
 
   const handleCopyId = () => {
     if (profile?.volckaId) {
@@ -12,6 +12,8 @@ export const Account: React.FC = () => {
       alert('تم نسخ المعرف بنجاح');
     }
   };
+
+  if (authLoading || !profile) return null;
 
   return (
     <div className="max-w-2xl mx-auto pt-6 md:pt-12 pb-24">

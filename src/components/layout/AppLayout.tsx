@@ -23,7 +23,7 @@ export const AppLayout: React.FC = () => {
     { to: '/settings', icon: Settings, label: 'الإعدادات' },
   ];
 
-  const displayName = profile?.fullName || profile?.email || 'User';
+  const displayName = profile?.fullName || user?.email || '';
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col lg:flex-row">
@@ -31,7 +31,7 @@ export const AppLayout: React.FC = () => {
       <aside className="hidden lg:flex flex-col w-64 bg-white border-l border-gray-100 h-screen sticky top-0 shadow-sm z-40">
         <div className="p-6 border-b border-gray-100 flex items-center gap-3">
           <div className="w-10 h-10 bg-indigo-600 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-sm shrink-0">
-            {displayName.charAt(0).toUpperCase()}
+            {displayName ? displayName.charAt(0).toUpperCase() : '?'}
           </div>
           <div className="overflow-hidden">
             <h1 className="text-xl font-black text-gray-900 tracking-tight truncate">VolckaPay</h1>
@@ -63,12 +63,14 @@ export const AppLayout: React.FC = () => {
         <header className="bg-white border-b border-gray-100 px-4 py-3 sticky top-0 z-30 flex items-center justify-between shadow-sm lg:px-8">
           <div className="flex items-center gap-3 lg:hidden">
             <div className="w-10 h-10 bg-indigo-600 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-sm">
-              {displayName.charAt(0).toUpperCase()}
+              {displayName ? displayName.charAt(0).toUpperCase() : '?'}
             </div>
             <h1 className="text-xl font-black text-gray-900 tracking-tight">VolckaPay</h1>
           </div>
           <div className="hidden lg:block">
-            <h2 className="text-xl font-bold text-gray-800">مرحباً، {displayName}</h2>
+            <h2 className="text-xl font-bold text-gray-800">
+              {displayName ? `مرحباً، ${displayName}` : 'مرحباً'}
+            </h2>
           </div>
           <Link to="/notifications" className="relative p-2 text-gray-600 hover:bg-gray-50 rounded-full transition-colors">
             <Bell size={24} />

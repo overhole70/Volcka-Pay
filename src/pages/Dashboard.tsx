@@ -8,7 +8,7 @@ import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 
 export const Dashboard: React.FC = () => {
-  const { profile } = useAuth();
+  const { profile, loading: authLoading } = useAuth();
   const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
@@ -55,34 +55,37 @@ export const Dashboard: React.FC = () => {
     }
   };
 
+  if (authLoading || !profile) return null;
+
   return (
     <div className="max-w-2xl mx-auto pt-2 md:pt-6 pb-20">
       {/* Premium Balance Card */}
-      <div className="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-3xl p-6 text-white shadow-lg shadow-indigo-200 mb-6 relative overflow-hidden">
+      <div className="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-3xl p-8 text-white shadow-lg shadow-indigo-200 mb-4 relative overflow-hidden text-center">
         {/* Decorative elements */}
         <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-5 rounded-full -translate-y-1/2 translate-x-1/3 blur-2xl"></div>
         <div className="absolute bottom-0 left-0 w-48 h-48 bg-white opacity-5 rounded-full translate-y-1/3 -translate-x-1/4 blur-2xl"></div>
         
         <div className="relative z-10">
-          <p className="text-indigo-100 font-medium mb-1 text-sm">الرصيد المتاح</p>
-          <h2 className="text-4xl md:text-5xl font-black tracking-tight mb-6" dir="ltr">
-            <span className="text-xl md:text-2xl text-indigo-200 mr-1">$</span>
+          <p className="text-indigo-100 font-medium mb-2 text-sm">الرصيد المتاح</p>
+          <h2 className="text-5xl md:text-6xl font-black tracking-tight" dir="ltr">
+            <span className="text-2xl md:text-3xl text-indigo-200 mr-1">$</span>
             {profile?.balance?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
           </h2>
-          
-          <div className="flex items-center justify-between bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10">
-            <div>
-              <p className="text-xs text-indigo-200 mb-1">معرف الحساب</p>
-              <p className="font-mono font-bold tracking-wider text-lg">{profile?.volckaId}</p>
-            </div>
-            <button 
-              onClick={handleCopy}
-              className="p-2.5 bg-white/20 hover:bg-white/30 rounded-xl transition-colors flex items-center justify-center"
-            >
-              {copied ? <CheckCircle2 size={20} className="text-emerald-400" /> : <Copy size={20} />}
-            </button>
-          </div>
         </div>
+      </div>
+
+      {/* Account ID below the card */}
+      <div className="flex items-center justify-between bg-white rounded-2xl p-4 border border-gray-100 shadow-sm mb-8">
+        <div>
+          <p className="text-xs text-gray-400 mb-1 font-bold">معرف الحساب</p>
+          <p className="font-mono font-bold tracking-wider text-lg text-gray-900">{profile?.volckaId}</p>
+        </div>
+        <button 
+          onClick={handleCopy}
+          className="p-2.5 bg-gray-50 hover:bg-gray-100 text-gray-600 rounded-xl transition-colors flex items-center justify-center border border-gray-100"
+        >
+          {copied ? <CheckCircle2 size={20} className="text-emerald-500" /> : <Copy size={20} />}
+        </button>
       </div>
 
       {/* Action Buttons */}
