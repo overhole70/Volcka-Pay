@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { Mail, Lock, Loader2, AlertCircle } from 'lucide-react';
+import { createNotification } from '../../lib/notifications';
 
 export const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -31,6 +32,13 @@ export const Login: React.FC = () => {
       }
 
       if (data.session) {
+        // Create login notification
+        await createNotification(
+          data.user.id,
+          'تسجيل دخول جديد',
+          'تم تسجيل الدخول إلى حسابك بنجاح.',
+          'security'
+        );
         navigate('/home');
       }
     } catch (err: any) {
@@ -40,18 +48,21 @@ export const Login: React.FC = () => {
   };
 
   return (
-    <div className="w-full">
-      <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center tracking-tight">تسجيل الدخول</h2>
+    <div className="w-full bg-white p-8 sm:p-10 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100/50 relative z-10">
+      <div className="text-center mb-8">
+        <h2 className="text-2xl font-bold text-gray-900 tracking-tight">تسجيل الدخول</h2>
+        <p className="text-sm text-gray-500 mt-2 font-medium">مرحباً بك مجدداً في حسابك</p>
+      </div>
       
       {error && (
-        <div className="bg-red-50 border border-red-100 text-red-600 p-4 rounded-xl text-sm mb-6 flex items-center gap-3">
+        <div className="bg-red-50/80 border border-red-100 text-red-600 p-4 rounded-2xl text-sm mb-6 flex items-center gap-3">
           <AlertCircle size={20} className="shrink-0" />
           <span className="font-medium">{error}</span>
         </div>
       )}
 
       <form onSubmit={handleLogin} className="space-y-5">
-        <div className="space-y-1.5">
+        <div className="space-y-2">
           <label className="block text-sm font-semibold text-gray-700">البريد الإلكتروني</label>
           <div className="relative">
             <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none text-gray-400">
@@ -62,14 +73,14 @@ export const Login: React.FC = () => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="w-full pr-11 pl-4 py-3.5 bg-gray-50/50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all duration-200 outline-none"
+              className="w-full pr-12 pl-4 py-4 bg-gray-50/50 border border-gray-200 rounded-2xl text-gray-900 placeholder-gray-400 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all duration-200 outline-none font-medium"
               placeholder="name@example.com"
               dir="ltr"
             />
           </div>
         </div>
 
-        <div className="space-y-1.5">
+        <div className="space-y-2">
           <label className="block text-sm font-semibold text-gray-700">كلمة المرور</label>
           <div className="relative">
             <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none text-gray-400">
@@ -80,7 +91,7 @@ export const Login: React.FC = () => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="w-full pr-11 pl-4 py-3.5 bg-gray-50/50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all duration-200 outline-none"
+              className="w-full pr-12 pl-4 py-4 bg-gray-50/50 border border-gray-200 rounded-2xl text-gray-900 placeholder-gray-400 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all duration-200 outline-none font-medium"
               placeholder="••••••••"
               dir="ltr"
             />
@@ -90,7 +101,7 @@ export const Login: React.FC = () => {
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-gray-900 hover:bg-gray-800 text-white py-4 rounded-xl font-bold text-base shadow-lg shadow-gray-900/20 active:scale-[0.98] transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-6"
+          className="w-full bg-gray-900 hover:bg-gray-800 text-white py-4 rounded-2xl font-bold text-base shadow-sm active:scale-[0.98] transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-8"
         >
           {loading ? (
             <>

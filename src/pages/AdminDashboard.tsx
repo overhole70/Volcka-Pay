@@ -2,9 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { db, collection, getDocs, doc, updateDoc, getDoc, setDoc, addDoc, serverTimestamp } from '../lib/firebase';
 import { UserProfile, DepositRequest, AppSettings } from '../types';
-import { ShieldAlert, Users, Wallet, Settings, Ban, CheckCircle2, XCircle, Clock, HelpCircle, Send } from 'lucide-react';
+import { ShieldAlert, Users, Wallet, Settings, Ban, CheckCircle2, XCircle, Clock, HelpCircle, Send, Bell } from 'lucide-react';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
+import { Navigate } from 'react-router-dom';
+
+// Define admin email clearly
+const ADMIN_EMAIL = 'volckastudio@gmail.com';
 
 interface SupportTicket {
   id: string;
@@ -18,19 +22,24 @@ interface SupportTicket {
 }
 
 export const AdminDashboard: React.FC = () => {
-  const { profile } = useAuth();
+  const { profile, user, loading: authLoading } = useAuth();
   const [activeTab, setActiveTab] = useState<'users' | 'deposits' | 'support' | 'settings'>('users');
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [depositRequests, setDepositRequests] = useState<DepositRequest[]>([]);
   const [supportTickets, setSupportTickets] = useState<SupportTicket[]>([]);
-  const [settings, setSettings] = useState<AppSettings>({ binanceId: '1171444753', adminEmail: 'volckastudio@gmail.com' });
+  const [settings, setSettings] = useState<AppSettings>({ binanceId: '1171444753', adminEmail: ADMIN_EMAIL });
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [replyText, setReplyText] = useState<{ [key: string]: string }>({});
+  const [notificationModal, setNotificationModal] = useState<{ isOpen: boolean, userId: string, userName: string, title: string, message: string }>({
+    isOpen: false, userId: '', userName: '', title: '', message: ''
+  });
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (user?.email === ADMIN_EMAIL || profile?.role === 'admin') {
+      fetchData();
+    }
+  }, [user, profile]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -84,6 +93,30 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
+  const handleSendNotification = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!notificationModal.title || !notificationModal.message) return;
+
+    setActionLoading('send-notification');
+    try {
+      await addDoc(collection(db, 'notifications'), {
+        user_id: notificationModal.userId,
+        title: notificationModal.title,
+        message: notificationModal.message,
+        type: 'admin',
+        read: false,
+        created_at: new Date().toISOString()
+      });
+      setNotificationModal({ isOpen: false, userId: '', userName: '', title: '', message: '' });
+      alert('تم إرسال الإشعار بنجاح');
+    } catch (error) {
+      console.error("Error sending notification:", error);
+      alert('حدث خطأ أثناء إرسال الإشعار');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const handleUpdateSettings = async (e: React.FormEvent) => {
     e.preventDefault();
     setActionLoading('settings');
@@ -114,6 +147,18 @@ export const AdminDashboard: React.FC = () => {
         }
       }
       
+      // Create notification for deposit status
+      await addDoc(collection(db, 'notifications'), {
+        user_id: userId,
+        title: status === 'approved' ? 'تمت الموافقة على الإيداع' : 'تم رفض الإيداع',
+        message: status === 'approved' 
+          ? `تمت الموافقة على إيداع مبلغ ${amount} دولار وإضافته لرصيدك` 
+          : `تم رفض طلب إيداع مبلغ ${amount} دولار`,
+        type: 'deposit',
+        read: false,
+        created_at: new Date().toISOString()
+      });
+
       setDepositRequests(depositRequests.map(req => req.id === requestId ? { ...req, status } : req));
     } catch (error) {
       console.error("Error updating deposit request:", error);
@@ -130,12 +175,12 @@ export const AdminDashboard: React.FC = () => {
     try {
       // Create notification
       await addDoc(collection(db, 'notifications'), {
-        userId,
+        user_id: userId,
         title: 'رد من الدعم',
         message: text,
-        type: 'support',
+        type: 'admin',
         read: false,
-        timestamp: new Date().toISOString(),
+        created_at: new Date().toISOString(),
       });
 
       // Update ticket status
@@ -154,14 +199,16 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
-  if (profile?.role !== 'admin') {
-    return (
-      <div className="flex flex-col items-center justify-center py-20 text-center">
-        <ShieldAlert size={64} className="text-red-500 mb-4" />
-        <h2 className="text-2xl font-black text-gray-900 mb-2">غير مصرح لك بالدخول</h2>
-        <p className="text-gray-500">هذه الصفحة مخصصة للمسؤولين فقط.</p>
-      </div>
-    );
+  if (authLoading) {
+    return <div className="min-h-screen flex items-center justify-center">جاري التحميل...</div>;
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (user.email !== ADMIN_EMAIL && profile?.role !== 'admin') {
+    return <Navigate to="/home" replace />;
   }
 
   return (
@@ -240,25 +287,88 @@ export const AdminDashboard: React.FC = () => {
                     <span className="font-black text-emerald-600 text-lg" dir="ltr">${u.balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                   </div>
                   {u.role !== 'admin' && (
-                    <button
-                      onClick={() => handleBanUser(u.uid, u.isBanned)}
-                      disabled={actionLoading === `ban-${u.uid}`}
-                      className={`w-full py-3 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-colors ${
-                        u.isBanned 
-                          ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100' 
-                          : 'bg-red-50 text-red-600 hover:bg-red-100'
-                      }`}
-                    >
-                      {actionLoading === `ban-${u.uid}` ? (
-                        <Clock size={18} className="animate-spin" />
-                      ) : (
-                        <Ban size={18} />
-                      )}
-                      {u.isBanned ? 'إلغاء الحظر' : 'حظر المستخدم'}
-                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleBanUser(u.uid, u.isBanned)}
+                        disabled={actionLoading === `ban-${u.uid}`}
+                        className={`flex-1 py-3 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-colors ${
+                          u.isBanned 
+                            ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100' 
+                            : 'bg-red-50 text-red-600 hover:bg-red-100'
+                        }`}
+                      >
+                        {actionLoading === `ban-${u.uid}` ? (
+                          <Clock size={18} className="animate-spin" />
+                        ) : (
+                          <Ban size={18} />
+                        )}
+                        {u.isBanned ? 'إلغاء الحظر' : 'حظر'}
+                      </button>
+                      <button
+                        onClick={() => setNotificationModal({ isOpen: true, userId: u.uid, userName: u.fullName || 'مستخدم', title: '', message: '' })}
+                        className="flex-1 py-3 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-colors bg-indigo-50 text-indigo-600 hover:bg-indigo-100"
+                      >
+                        <Bell size={18} />
+                        إشعار
+                      </button>
+                    </div>
                   )}
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* Notification Modal */}
+          {notificationModal.isOpen && (
+            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-3xl p-6 w-full max-w-md">
+                <h3 className="text-xl font-bold text-gray-900 mb-4">
+                  إرسال إشعار إلى {notificationModal.userName}
+                </h3>
+                <form onSubmit={handleSendNotification} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">عنوان الإشعار</label>
+                    <input
+                      type="text"
+                      required
+                      value={notificationModal.title}
+                      onChange={(e) => setNotificationModal({ ...notificationModal, title: e.target.value })}
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">نص الإشعار</label>
+                    <textarea
+                      required
+                      rows={4}
+                      value={notificationModal.message}
+                      onChange={(e) => setNotificationModal({ ...notificationModal, message: e.target.value })}
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none resize-none"
+                    />
+                  </div>
+                  <div className="flex gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setNotificationModal({ isOpen: false, userId: '', userName: '', title: '', message: '' })}
+                      className="flex-1 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200 transition-colors"
+                    >
+                      إلغاء
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={actionLoading === 'send-notification'}
+                      className="flex-1 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-70"
+                    >
+                      {actionLoading === 'send-notification' ? (
+                        <Clock size={18} className="animate-spin" />
+                      ) : (
+                        <Send size={18} />
+                      )}
+                      إرسال
+                    </button>
+                  </div>
+                </form>
+              </div>
             </div>
           )}
 

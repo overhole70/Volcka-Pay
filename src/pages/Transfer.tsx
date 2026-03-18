@@ -145,11 +145,12 @@ export const Transfer: React.FC = () => {
         // Create notification for receiver
         const notifRef = doc(collection(db, 'notifications'));
         transaction.set(notifRef, {
-          userId: receiverData.uid,
+          user_id: receiverData.uid,
           title: 'استلام أموال',
           message: `تم استلام ${transferAmount} دولار من حساب ${profile.volckaId}`,
+          type: 'transfer',
           read: false,
-          timestamp: new Date().toISOString()
+          created_at: new Date().toISOString()
         });
       });
 

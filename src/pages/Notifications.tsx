@@ -17,14 +17,14 @@ export const Notifications: React.FC = () => {
       try {
         const q = query(
           collection(db, 'notifications'),
-          where('userId', '==', profile.uid)
+          where('user_id', '==', profile.uid)
         );
         
         const snap = await getDocs(q);
         const notifs = snap.docs.map(d => ({ id: d.id, ...d.data() } as Notification));
         
         // Sort in memory to avoid needing a composite index
-        notifs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+        notifs.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
         
         setNotifications(notifs);
 
@@ -77,7 +77,7 @@ export const Notifications: React.FC = () => {
                     {notif.message}
                   </p>
                   <p className="text-sm text-gray-400 font-medium">
-                    {format(new Date(notif.timestamp), 'dd MMMM yyyy, hh:mm a', { locale: ar })}
+                    {format(new Date(notif.created_at), 'dd MMMM yyyy, hh:mm a', { locale: ar })}
                   </p>
                 </div>
               </div>

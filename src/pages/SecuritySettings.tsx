@@ -1,29 +1,51 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { Shield, Key, Smartphone, ChevronRight } from 'lucide-react';
+import { Shield, Key, Smartphone, ChevronRight, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { db, doc, updateDoc } from '../lib/firebase';
+import { createNotification } from '../lib/notifications';
 
 export const SecuritySettings: React.FC = () => {
   const { profile, user, refreshProfile } = useAuth();
   const navigate = useNavigate();
   const [resetSent, setResetSent] = useState(false);
   const [updatingOtp, setUpdatingOtp] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [updatingPassword, setUpdatingPassword] = useState(false);
+  const [passwordMessage, setPasswordMessage] = useState({ type: '', text: '' });
 
-  const handlePasswordReset = async () => {
-    const emailToReset = profile?.email || user?.email;
-    if (!emailToReset) return;
+  const handlePasswordUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newPassword || newPassword.length < 6) {
+      setPasswordMessage({ type: 'error', text: 'كلمة المرور يجب أن تكون 6 أحرف على الأقل' });
+      return;
+    }
+
+    setUpdatingPassword(true);
+    setPasswordMessage({ type: '', text: '' });
+
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(emailToReset, {
-        redirectTo: `${window.location.origin}/settings/security`,
-      });
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      
       if (error) throw error;
-      setResetSent(true);
-      setTimeout(() => setResetSent(false), 5000);
-    } catch (error) {
-      console.error('Error sending password reset:', error);
-      alert('حدث خطأ أثناء إرسال رابط إعادة تعيين كلمة المرور');
+      
+      setPasswordMessage({ type: 'success', text: 'تم تحديث كلمة المرور بنجاح' });
+      setNewPassword('');
+
+      if (user) {
+        await createNotification(
+          user.id,
+          'تغيير كلمة المرور',
+          'تم تغيير كلمة المرور الخاصة بحسابك بنجاح.',
+          'security'
+        );
+      }
+    } catch (error: any) {
+      console.error('Error updating password:', error);
+      setPasswordMessage({ type: 'error', text: error.message || 'حدث خطأ أثناء تحديث كلمة المرور' });
+    } finally {
+      setUpdatingPassword(false);
     }
   };
 
@@ -116,22 +138,53 @@ export const SecuritySettings: React.FC = () => {
               <Key size={20} />
             </div>
             <div className="flex-1">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                  <h3 className="text-base font-bold text-gray-900 mb-1">كلمة المرور</h3>
-                  <p className="text-sm text-gray-500 font-medium leading-relaxed max-w-md">
-                    قم بتغيير كلمة المرور الخاصة بحسابك بانتظام لضمان حماية أفضل. سيتم إرسال رابط آمن لإعادة التعيين إلى بريدك الإلكتروني.
-                  </p>
-                </div>
-                <button
-                  onClick={handlePasswordReset}
-                  disabled={resetSent}
-                  className="flex items-center justify-center gap-2 px-5 py-2.5 bg-gray-900 hover:bg-gray-800 text-white rounded-xl font-bold transition-all active:scale-95 disabled:opacity-50 shrink-0 text-sm"
-                >
-                  <Key size={16} />
-                  {resetSent ? 'تم إرسال الرابط' : 'تغيير كلمة المرور'}
-                </button>
+              <div className="mb-4">
+                <h3 className="text-base font-bold text-gray-900 mb-1">كلمة المرور</h3>
+                <p className="text-sm text-gray-500 font-medium leading-relaxed max-w-md">
+                  قم بتغيير كلمة المرور الخاصة بحسابك بانتظام لضمان حماية أفضل.
+                </p>
               </div>
+              
+              <form onSubmit={handlePasswordUpdate} className="space-y-4 max-w-md">
+                {passwordMessage.text && (
+                  <div className={`p-3 rounded-xl text-sm font-medium ${
+                    passwordMessage.type === 'error' ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'
+                  }`}>
+                    {passwordMessage.text}
+                  </div>
+                )}
+                
+                <div>
+                  <input
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="كلمة المرور الجديدة (6 أحرف على الأقل)"
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
+                    dir="ltr"
+                    minLength={6}
+                    required
+                  />
+                </div>
+                
+                <button
+                  type="submit"
+                  disabled={updatingPassword || !newPassword}
+                  className="flex items-center justify-center gap-2 px-5 py-2.5 bg-gray-900 hover:bg-gray-800 text-white rounded-xl font-bold transition-all active:scale-95 disabled:opacity-50 text-sm w-full sm:w-auto"
+                >
+                  {updatingPassword ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" />
+                      جاري التحديث...
+                    </>
+                  ) : (
+                    <>
+                      <Key size={16} />
+                      تحديث كلمة المرور
+                    </>
+                  )}
+                </button>
+              </form>
             </div>
           </div>
         </div>

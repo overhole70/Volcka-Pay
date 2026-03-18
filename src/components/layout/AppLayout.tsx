@@ -1,10 +1,30 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Outlet, Navigate, NavLink, Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { Home, ArrowRightLeft, Bell, TrendingUp, User, Settings, ShieldAlert } from 'lucide-react';
+import { db, collection, query, where, onSnapshot } from '../../lib/firebase';
 
 export const AppLayout: React.FC = () => {
   const { user, profile, loading } = useAuth();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    if (!profile) return;
+
+    const q = query(
+      collection(db, 'notifications'),
+      where('user_id', '==', profile.uid),
+      where('read', '==', false)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setUnreadCount(snapshot.docs.length);
+    }, (error) => {
+      console.error("Error fetching unread notifications:", error);
+    });
+
+    return () => unsubscribe();
+  }, [profile]);
 
   if (loading) return <div className="min-h-screen flex items-center justify-center">جاري التحميل...</div>;
   if (!user) return <Navigate to="/login" replace />;
@@ -86,8 +106,9 @@ export const AppLayout: React.FC = () => {
           </div>
           <Link to="/notifications" className="relative p-2 text-gray-600 hover:bg-gray-50 rounded-full transition-colors">
             <Bell size={24} />
-            {/* Unread badge indicator (optional) */}
-            <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 border-2 border-white rounded-full"></span>
+            {unreadCount > 0 && (
+              <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 border-2 border-white rounded-full"></span>
+            )}
           </Link>
         </header>
 

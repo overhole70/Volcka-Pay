@@ -39,11 +39,12 @@ export interface AppSettings {
 
 export interface Notification {
   id: string;
-  userId: string;
+  user_id: string;
   title: string;
   message: string;
+  type: 'transfer' | 'deposit' | 'security' | 'admin' | 'system';
   read: boolean;
-  timestamp: string;
+  created_at: string;
 }
 
 export interface Ad {

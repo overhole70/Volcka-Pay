@@ -36,7 +36,15 @@ export const Register: React.FC = () => {
       });
       
       if (error) {
+        if (error.message.includes('already registered') || error.message.includes('User already exists')) {
+          throw new Error('هذا البريد مستخدم بالفعل');
+        }
         throw new Error(error.message || 'حدث خطأ أثناء التسجيل');
+      }
+
+      // Supabase returns a user with empty identities if the email already exists and email confirmations are enabled
+      if (data?.user && data.user.identities && data.user.identities.length === 0) {
+        throw new Error('هذا البريد مستخدم بالفعل');
       }
 
       if (data.user) {
@@ -50,18 +58,21 @@ export const Register: React.FC = () => {
   };
 
   return (
-    <div className="w-full">
-      <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center tracking-tight">إنشاء حساب جديد</h2>
+    <div className="w-full bg-white p-8 sm:p-10 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100/50 relative z-10">
+      <div className="text-center mb-8">
+        <h2 className="text-2xl font-bold text-gray-900 tracking-tight">إنشاء حساب جديد</h2>
+        <p className="text-sm text-gray-500 mt-2 font-medium">ابدأ رحلتك المالية معنا اليوم</p>
+      </div>
       
       {error && (
-        <div className="bg-red-50 border border-red-100 text-red-600 p-4 rounded-xl text-sm mb-6 flex items-center gap-3">
+        <div className="bg-red-50/80 border border-red-100 text-red-600 p-4 rounded-2xl text-sm mb-6 flex items-center gap-3">
           <AlertCircle size={20} className="shrink-0" />
           <span className="font-medium">{error}</span>
         </div>
       )}
 
       <form onSubmit={handleRegister} className="space-y-5">
-        <div className="space-y-1.5">
+        <div className="space-y-2">
           <label className="block text-sm font-semibold text-gray-700">الاسم الكامل</label>
           <div className="relative">
             <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none text-gray-400">
@@ -72,13 +83,13 @@ export const Register: React.FC = () => {
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
               required
-              className="w-full pr-11 pl-4 py-3.5 bg-gray-50/50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all duration-200 outline-none"
+              className="w-full pr-12 pl-4 py-4 bg-gray-50/50 border border-gray-200 rounded-2xl text-gray-900 placeholder-gray-400 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all duration-200 outline-none font-medium"
               placeholder="الاسم الكامل"
             />
           </div>
         </div>
 
-        <div className="space-y-1.5">
+        <div className="space-y-2">
           <label className="block text-sm font-semibold text-gray-700">البريد الإلكتروني</label>
           <div className="relative">
             <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none text-gray-400">
@@ -89,14 +100,14 @@ export const Register: React.FC = () => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="w-full pr-11 pl-4 py-3.5 bg-gray-50/50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all duration-200 outline-none"
+              className="w-full pr-12 pl-4 py-4 bg-gray-50/50 border border-gray-200 rounded-2xl text-gray-900 placeholder-gray-400 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all duration-200 outline-none font-medium"
               placeholder="name@example.com"
               dir="ltr"
             />
           </div>
         </div>
 
-        <div className="space-y-1.5">
+        <div className="space-y-2">
           <label className="block text-sm font-semibold text-gray-700">كلمة المرور</label>
           <div className="relative">
             <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none text-gray-400">
@@ -108,14 +119,14 @@ export const Register: React.FC = () => {
               onChange={(e) => setPassword(e.target.value)}
               required
               minLength={6}
-              className="w-full pr-11 pl-4 py-3.5 bg-gray-50/50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all duration-200 outline-none"
+              className="w-full pr-12 pl-4 py-4 bg-gray-50/50 border border-gray-200 rounded-2xl text-gray-900 placeholder-gray-400 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all duration-200 outline-none font-medium"
               placeholder="••••••••"
               dir="ltr"
             />
           </div>
         </div>
 
-        <div className="space-y-1.5">
+        <div className="space-y-2">
           <label className="block text-sm font-semibold text-gray-700">تأكيد كلمة المرور</label>
           <div className="relative">
             <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none text-gray-400">
@@ -127,7 +138,7 @@ export const Register: React.FC = () => {
               onChange={(e) => setConfirmPassword(e.target.value)}
               required
               minLength={6}
-              className="w-full pr-11 pl-4 py-3.5 bg-gray-50/50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all duration-200 outline-none"
+              className="w-full pr-12 pl-4 py-4 bg-gray-50/50 border border-gray-200 rounded-2xl text-gray-900 placeholder-gray-400 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all duration-200 outline-none font-medium"
               placeholder="••••••••"
               dir="ltr"
             />
@@ -137,7 +148,7 @@ export const Register: React.FC = () => {
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-gray-900 hover:bg-gray-800 text-white py-4 rounded-xl font-bold text-base shadow-lg shadow-gray-900/20 active:scale-[0.98] transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-6"
+          className="w-full bg-gray-900 hover:bg-gray-800 text-white py-4 rounded-2xl font-bold text-base shadow-sm active:scale-[0.98] transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-8"
         >
           {loading ? (
             <>

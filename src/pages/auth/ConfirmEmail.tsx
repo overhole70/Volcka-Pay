@@ -112,12 +112,12 @@ export const ConfirmEmail: React.FC = () => {
   }
 
   return (
-    <div className="w-full text-center">
-      <div className="w-20 h-20 bg-gray-50 text-gray-900 rounded-full flex items-center justify-center mx-auto mb-6">
+    <div className="w-full bg-white p-8 sm:p-10 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100/50 relative z-10 text-center">
+      <div className="w-20 h-20 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-6">
         <Mail size={40} />
       </div>
-      <h2 className="text-3xl font-black text-gray-900 mb-4">تأكيد البريد الإلكتروني</h2>
-      <p className="text-gray-600 font-medium mb-8 leading-relaxed">
+      <h2 className="text-2xl font-bold text-gray-900 mb-4 tracking-tight">تأكيد البريد الإلكتروني</h2>
+      <p className="text-gray-500 font-medium mb-8 leading-relaxed text-sm">
         تم إرسال رسالة تأكيد إلى بريدك الإلكتروني.<br/>يرجى فتح بريدك الإلكتروني وتأكيد الحساب.
       </p>
 
@@ -131,7 +131,7 @@ export const ConfirmEmail: React.FC = () => {
         <button
           onClick={handleCheckConfirmation}
           disabled={loading}
-          className="w-full bg-gray-900 text-white py-4 rounded-2xl font-bold text-lg hover:bg-gray-800 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+          className="w-full bg-gray-900 text-white py-4 rounded-2xl font-bold text-base shadow-sm active:scale-[0.98] hover:bg-gray-800 transition-all duration-200 disabled:opacity-70 flex items-center justify-center gap-2"
         >
           <CheckCircle2 size={20} />
           {loading ? 'جاري التحقق...' : 'لقد أكدت البريد الإلكتروني'}
@@ -140,15 +140,15 @@ export const ConfirmEmail: React.FC = () => {
         <button
           onClick={handleResendConfirmation}
           disabled={resendCooldown > 0 || loading}
-          className="w-full bg-white text-gray-900 border-2 border-gray-100 py-4 rounded-2xl font-bold text-lg hover:bg-gray-50 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+          className="w-full bg-white text-gray-900 border-2 border-gray-100 py-4 rounded-2xl font-bold text-base hover:bg-gray-50 transition-all duration-200 disabled:opacity-70 flex items-center justify-center gap-2"
         >
           <RefreshCw size={20} className={resendCooldown > 0 ? 'opacity-50' : ''} />
-          {resendCooldown > 0 ? `إعادة إرسال رسالة التأكيد (${resendCooldown}ث)` : 'إعادة إرسال رسالة التأكيد'}
+          {resendCooldown > 0 ? `إعادة الإرسال (${resendCooldown}ث)` : 'إعادة إرسال رسالة التأكيد'}
         </button>
 
         <button
           onClick={handleLogout}
-          className="w-full text-gray-500 py-4 rounded-2xl font-bold text-lg hover:text-gray-900 transition-colors flex items-center justify-center gap-2"
+          className="w-full text-gray-500 py-4 rounded-2xl font-bold text-base hover:text-gray-900 transition-colors flex items-center justify-center gap-2 mt-4"
         >
           <LogOut size={20} />
           تسجيل الخروج

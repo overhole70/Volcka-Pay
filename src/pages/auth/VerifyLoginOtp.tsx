@@ -145,12 +145,12 @@ export const VerifyLoginOtp: React.FC = () => {
   if (!user || !profile) return null;
 
   return (
-    <div className="w-full">
+    <div className="w-full bg-white p-8 sm:p-10 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100/50 relative z-10">
       <button 
         onClick={handleCancel}
-        className="flex items-center text-gray-500 hover:text-gray-900 mb-8 transition-colors font-medium"
+        className="flex items-center text-gray-500 hover:text-gray-900 mb-8 transition-colors font-medium text-sm"
       >
-        <ArrowRight size={20} className="ml-2" />
+        <ArrowRight size={18} className="ml-1.5" />
         العودة لتسجيل الدخول
       </button>
 
@@ -158,20 +158,22 @@ export const VerifyLoginOtp: React.FC = () => {
         <ShieldCheck size={40} />
       </div>
       
-      <h2 className="text-3xl font-black text-gray-900 mb-4 text-center">التحقق بخطوتين</h2>
-      <p className="text-gray-600 font-medium mb-8 text-center leading-relaxed">
-        لقد قمنا بإرسال رمز تحقق مكون من 6 أرقام إلى بريدك الإلكتروني<br/>
-        <span className="text-gray-900 font-bold" dir="ltr">{user.email}</span>
-      </p>
+      <div className="text-center mb-8">
+        <h2 className="text-2xl font-bold text-gray-900 tracking-tight">التحقق بخطوتين</h2>
+        <p className="text-sm text-gray-500 mt-2 font-medium leading-relaxed">
+          لقد قمنا بإرسال رمز تحقق مكون من 6 أرقام إلى بريدك الإلكتروني<br/>
+          <span className="text-gray-900 font-bold" dir="ltr">{user.email}</span>
+        </p>
+      </div>
 
       {error && (
-        <div className="bg-red-50 text-red-600 p-4 rounded-2xl text-sm mb-8 font-medium text-center">
+        <div className="bg-red-50/80 border border-red-100 text-red-600 p-4 rounded-2xl text-sm mb-8 font-medium text-center">
           {error}
         </div>
       )}
 
       <form onSubmit={handleVerify} className="space-y-8">
-        <div className="flex justify-center gap-1.5" dir="ltr">
+        <div className="flex justify-center gap-2" dir="ltr">
           {otp.map((digit, index) => (
             <input
               key={index}
@@ -184,7 +186,7 @@ export const VerifyLoginOtp: React.FC = () => {
               onChange={(e) => handleChange(index, e.target.value)}
               onKeyDown={(e) => handleKeyDown(index, e)}
               onPaste={(e) => handlePaste(index, e)}
-              className="w-12 h-14 text-center text-2xl font-bold rounded-xl border-2 border-gray-100 focus:ring-0 focus:border-gray-900 transition-colors bg-white outline-none"
+              className="w-12 h-14 text-center text-2xl font-bold rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all duration-200 bg-gray-50/50 outline-none"
             />
           ))}
         </div>
@@ -192,7 +194,7 @@ export const VerifyLoginOtp: React.FC = () => {
         <button
           type="submit"
           disabled={loading || otp.join('').length !== 6}
-          className="w-full bg-gray-900 text-white py-4 rounded-2xl font-bold text-lg hover:bg-gray-800 transition-colors disabled:opacity-50"
+          className="w-full bg-gray-900 hover:bg-gray-800 text-white py-4 rounded-2xl font-bold text-base shadow-sm active:scale-[0.98] transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
           {loading ? 'جاري التحقق...' : 'تأكيد الرمز'}
         </button>

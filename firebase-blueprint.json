@@ -40,6 +40,20 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["email", "code", "expiresAt", "verified"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "User notifications",
+      "type": "object",
+      "properties": {
+        "user_id": { "type": "string" },
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "type": { "type": "string", "enum": ["transfer", "deposit", "security", "admin", "system"] },
+        "read": { "type": "boolean" },
+        "created_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["user_id", "title", "message", "type", "read", "created_at"]
     }
   },
   "firestore": {
@@ -54,6 +68,10 @@
     "/otps/{email}": {
       "schema": "OTP",
       "description": "One-time passwords"
+    },
+    "/notifications/{notificationId}": {
+      "schema": "Notification",
+      "description": "User notifications"
     }
   }
 }
