@@ -15,6 +15,18 @@ export const AppLayout: React.FC = () => {
     return <Navigate to="/verify-login-otp" replace />;
   }
 
+  if (!profile && !loading && user) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gray-50">
+        <ShieldAlert className="w-16 h-16 text-red-500 mb-4" />
+        <p className="text-gray-900 font-bold mb-4 text-lg">حدث خطأ أثناء تحميل بيانات الحساب.</p>
+        <button onClick={() => window.location.reload()} className="bg-gray-900 text-white px-6 py-2 rounded-xl font-medium hover:bg-gray-800 transition-colors">
+          إعادة المحاولة
+        </button>
+      </div>
+    );
+  }
+
   const navItems = [
     { to: '/home', icon: Home, label: 'الرئيسية' },
     { to: '/transfer', icon: ArrowRightLeft, label: 'التحويلات' },

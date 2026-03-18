@@ -26,13 +26,16 @@ export const AuthLayout: React.FC = () => {
         <div className="absolute top-[20%] -left-[10%] w-[50%] h-[50%] rounded-full bg-gradient-to-tr from-emerald-50 to-teal-100 blur-3xl opacity-60"></div>
       </div>
 
-      <div className="flex-1 flex items-center justify-center p-4 sm:p-8 relative z-10">
+      <div className="flex-1 flex items-center justify-center p-4 sm:p-8 relative z-10 w-full">
         <div className="w-full max-w-md">
           <div className="text-center mb-10">
             <h1 className="text-4xl font-black text-gray-900 tracking-tight">VolckaPay</h1>
             <p className="text-gray-500 mt-2 text-sm font-medium">النظام المالي الرقمي المتكامل</p>
           </div>
-          <Outlet />
+          
+          <div className="w-full">
+            <Outlet />
+          </div>
         </div>
       </div>
     </div>

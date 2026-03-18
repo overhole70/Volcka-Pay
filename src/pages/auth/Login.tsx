@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
+import { Mail, Lock, Loader2, AlertCircle } from 'lucide-react';
 
 export const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -15,7 +16,6 @@ export const Login: React.FC = () => {
     setError('');
 
     try {
-      // 1. Execute Supabase login directly on client (only once)
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       
       if (error) {
@@ -30,7 +30,6 @@ export const Login: React.FC = () => {
         return;
       }
 
-      // 2. Redirect immediately after successful login
       if (data.session) {
         navigate('/home');
       }
@@ -42,53 +41,71 @@ export const Login: React.FC = () => {
 
   return (
     <div className="w-full">
-      <h2 className="text-3xl font-black text-gray-900 mb-8 text-center">تسجيل الدخول</h2>
+      <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center tracking-tight">تسجيل الدخول</h2>
       
       {error && (
-        <div className="bg-red-50 text-red-600 p-4 rounded-2xl text-sm mb-8 font-medium text-center">
-          {error}
+        <div className="bg-red-50 border border-red-100 text-red-600 p-4 rounded-xl text-sm mb-6 flex items-center gap-3">
+          <AlertCircle size={20} className="shrink-0" />
+          <span className="font-medium">{error}</span>
         </div>
       )}
 
-      <form onSubmit={handleLogin} className="space-y-6">
-        <div>
-          <label className="block text-sm font-bold text-gray-900 mb-3">البريد الإلكتروني</label>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            className="w-full px-5 py-4 rounded-2xl border-2 border-gray-100 focus:ring-0 focus:border-gray-900 transition-colors bg-white outline-none text-lg"
-            placeholder="name@example.com"
-            dir="ltr"
-          />
+      <form onSubmit={handleLogin} className="space-y-5">
+        <div className="space-y-1.5">
+          <label className="block text-sm font-semibold text-gray-700">البريد الإلكتروني</label>
+          <div className="relative">
+            <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none text-gray-400">
+              <Mail size={20} />
+            </div>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              className="w-full pr-11 pl-4 py-3.5 bg-gray-50/50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all duration-200 outline-none"
+              placeholder="name@example.com"
+              dir="ltr"
+            />
+          </div>
         </div>
 
-        <div>
-          <label className="block text-sm font-bold text-gray-900 mb-3">كلمة المرور</label>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            className="w-full px-5 py-4 rounded-2xl border-2 border-gray-100 focus:ring-0 focus:border-gray-900 transition-colors bg-white outline-none text-lg"
-            placeholder="••••••••"
-            dir="ltr"
-          />
+        <div className="space-y-1.5">
+          <label className="block text-sm font-semibold text-gray-700">كلمة المرور</label>
+          <div className="relative">
+            <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none text-gray-400">
+              <Lock size={20} />
+            </div>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              className="w-full pr-11 pl-4 py-3.5 bg-gray-50/50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all duration-200 outline-none"
+              placeholder="••••••••"
+              dir="ltr"
+            />
+          </div>
         </div>
 
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-gray-900 text-white py-4 rounded-2xl font-bold text-lg hover:bg-gray-800 transition-colors disabled:opacity-50 mt-8"
+          className="w-full bg-gray-900 hover:bg-gray-800 text-white py-4 rounded-xl font-bold text-base shadow-lg shadow-gray-900/20 active:scale-[0.98] transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-6"
         >
-          {loading ? 'جاري الدخول...' : 'تسجيل الدخول'}
+          {loading ? (
+            <>
+              <Loader2 className="animate-spin" size={20} />
+              <span>جاري الدخول...</span>
+            </>
+          ) : (
+            'تسجيل الدخول'
+          )}
         </button>
       </form>
 
-      <div className="mt-10 text-center text-gray-500 font-medium">
+      <div className="mt-8 text-center text-sm text-gray-500 font-medium">
         ليس لديك حساب؟{' '}
-        <Link to="/signup" className="text-gray-900 font-bold hover:underline">
+        <Link to="/signup" className="text-indigo-600 font-bold hover:text-indigo-700 transition-colors">
           إنشاء حساب جديد
         </Link>
       </div>
