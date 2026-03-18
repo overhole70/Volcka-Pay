@@ -22,13 +22,48 @@ export const getDoc = async (docRef: any) => {
   const res = await fetch(`/api/firestore/${docRef.collection}/${docRef.id}`);
   if (res.status === 404) return { exists: () => false, data: () => null };
   const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.error || 'Failed to fetch document');
+  }
   return { exists: () => true, data: () => data };
 };
 
 export const getDocs = async (queryRef: any) => {
-  const collName = queryRef.collection?.name || queryRef.name;
+  const collName = queryRef.collection?.name || queryRef.name || queryRef.collName;
   const res = await fetch(`/api/firestore/${collName}`);
-  const data = await res.json();
+  let data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.error || 'Failed to fetch documents');
+  }
+
+  // Apply client-side filtering if constraints exist
+  if (queryRef.constraints) {
+    for (const constraint of queryRef.constraints) {
+      if (constraint.type === 'where') {
+        data = data.filter((d: any) => {
+          const val = d[constraint.field];
+          if (constraint.op === '==') return val === constraint.value;
+          if (constraint.op === '>') return val > constraint.value;
+          if (constraint.op === '<') return val < constraint.value;
+          if (constraint.op === '>=') return val >= constraint.value;
+          if (constraint.op === '<=') return val <= constraint.value;
+          if (constraint.op === '!=') return val !== constraint.value;
+          return true;
+        });
+      } else if (constraint.type === 'orderBy') {
+        data = data.sort((a: any, b: any) => {
+          const valA = a[constraint.field];
+          const valB = b[constraint.field];
+          if (valA < valB) return constraint.dir === 'asc' ? -1 : 1;
+          if (valA > valB) return constraint.dir === 'asc' ? 1 : -1;
+          return 0;
+        });
+      } else if (constraint.type === 'limit') {
+        data = data.slice(0, constraint.n);
+      }
+    }
+  }
+
   return {
     empty: data.length === 0,
     docs: data.map((d: any) => ({
@@ -64,19 +99,19 @@ export const updateDoc = async (docRef: any, data: any) => {
 };
 
 export const query = (collRef: any, ...constraints: any[]) => {
-  return collRef; // Simplified for now
+  return { collName: collRef.name || collRef, constraints };
 };
 
 export const where = (field: string, op: string, value: any) => {
-  return { field, op, value };
+  return { type: 'where', field, op, value };
 };
 
 export const orderBy = (field: string, dir: string) => {
-  return { field, dir };
+  return { type: 'orderBy', field, dir };
 };
 
 export const limit = (n: number) => {
-  return { limit: n };
+  return { type: 'limit', n };
 };
 
 export const onSnapshot = (ref: any, callback: any) => {
