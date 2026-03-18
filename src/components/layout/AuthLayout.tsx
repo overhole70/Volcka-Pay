@@ -11,7 +11,7 @@ export const AuthLayout: React.FC = () => {
   if (user) {
     if (user.email_confirmed_at) {
       if (location.pathname !== '/verify-login-otp') {
-        return <Navigate to="/" replace />;
+        return <Navigate to="/home" replace />;
       }
     } else if (location.pathname !== '/confirm-email') {
       return <Navigate to="/confirm-email" replace />;

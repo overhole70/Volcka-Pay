@@ -16,7 +16,7 @@ export const AppLayout: React.FC = () => {
   }
 
   const navItems = [
-    { to: '/', icon: Home, label: 'الرئيسية' },
+    { to: '/home', icon: Home, label: 'الرئيسية' },
     { to: '/transfer', icon: ArrowRightLeft, label: 'التحويلات' },
     { to: '/earnings', icon: TrendingUp, label: 'الأرباح' },
     { to: '/account', icon: User, label: 'الحساب' },

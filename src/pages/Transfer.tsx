@@ -159,7 +159,7 @@ export const Transfer: React.FC = () => {
       await refreshProfile();
       
       setTimeout(() => {
-        navigate('/');
+        navigate('/home');
       }, 2000);
     } catch (err: any) {
       setError(err.message || 'حدث خطأ أثناء التحويل');

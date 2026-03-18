@@ -19,7 +19,7 @@ export const ConfirmEmail: React.FC = () => {
   useEffect(() => {
     // If user is already confirmed, redirect to home
     if (user?.email_confirmed_at) {
-      navigate('/');
+      navigate('/home');
     }
   }, [user, navigate]);
 
@@ -42,7 +42,7 @@ export const ConfirmEmail: React.FC = () => {
         if (error) throw error;
         
         if (data.session?.user?.email_confirmed_at) {
-          navigate('/');
+          navigate('/home');
         } else {
           setError('لم يتم تأكيد البريد الإلكتروني بعد. يرجى التحقق من صندوق الوارد الخاص بك.');
         }
@@ -61,7 +61,7 @@ export const ConfirmEmail: React.FC = () => {
           }
         } else if (data.session) {
           // Email is confirmed and user is logged in
-          navigate('/');
+          navigate('/home');
         }
       } else {
         setError('يرجى تسجيل الدخول للتحقق من حالة التأكيد.');

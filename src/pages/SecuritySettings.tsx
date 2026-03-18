@@ -6,15 +6,16 @@ import { supabase } from '../lib/supabase';
 import { db, doc, updateDoc } from '../lib/firebase';
 
 export const SecuritySettings: React.FC = () => {
-  const { profile, refreshProfile } = useAuth();
+  const { profile, user, refreshProfile } = useAuth();
   const navigate = useNavigate();
   const [resetSent, setResetSent] = useState(false);
   const [updatingOtp, setUpdatingOtp] = useState(false);
 
   const handlePasswordReset = async () => {
-    if (!profile?.email) return;
+    const emailToReset = profile?.email || user?.email;
+    if (!emailToReset) return;
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(profile.email, {
+      const { error } = await supabase.auth.resetPasswordForEmail(emailToReset, {
         redirectTo: `${window.location.origin}/settings/security`,
       });
       if (error) throw error;
@@ -71,7 +72,7 @@ export const SecuritySettings: React.FC = () => {
             <div>
               <h3 className="text-base font-bold text-gray-900 mb-1">البريد الإلكتروني المسجل</h3>
               <p className="text-sm text-gray-500 font-medium mb-3">هذا هو البريد الإلكتروني المرتبط بحسابك</p>
-              <p className="font-bold text-gray-900 bg-gray-50 px-4 py-2.5 rounded-xl inline-block border border-gray-100" dir="ltr">{profile?.email}</p>
+              <p className="font-bold text-gray-900 bg-gray-50 px-4 py-2.5 rounded-xl inline-block border border-gray-100" dir="ltr">{profile?.email || user?.email}</p>
             </div>
           </div>
         </div>

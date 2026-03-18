@@ -4,7 +4,7 @@ import { LogOut, Copy, User, Shield, Settings, HelpCircle, MonitorPlay, Clock } 
 import { Link } from 'react-router-dom';
 
 export const Account: React.FC = () => {
-  const { profile, signOut, loading: authLoading } = useAuth();
+  const { profile, user, signOut, loading: authLoading } = useAuth();
 
   const handleCopyId = () => {
     if (profile?.volckaId) {
@@ -13,7 +13,7 @@ export const Account: React.FC = () => {
     }
   };
 
-  if (authLoading || !profile) return null;
+  if (authLoading) return <div className="flex justify-center p-8 text-gray-500">جاري التحميل...</div>;
 
   return (
     <div className="max-w-2xl mx-auto pt-6 md:pt-12 pb-24">
@@ -21,7 +21,7 @@ export const Account: React.FC = () => {
         <div className="w-24 h-24 bg-gradient-to-tr from-indigo-600 to-purple-600 rounded-full mx-auto mb-4 flex items-center justify-center shadow-lg shadow-indigo-200">
           <User size={40} className="text-white" />
         </div>
-        <h1 className="text-2xl font-black text-gray-900 tracking-tight">{profile?.fullName || profile?.email}</h1>
+        <h1 className="text-2xl font-black text-gray-900 tracking-tight">{profile?.fullName || profile?.email || user?.email}</h1>
         <p className="text-gray-500 font-medium mt-1">عضو فولكا</p>
       </div>
 

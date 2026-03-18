@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { AuthLayout } from './components/layout/AuthLayout';
 import { AppLayout } from './components/layout/AppLayout';
@@ -33,12 +33,13 @@ export default function App() {
         <Routes>
           <Route element={<AuthLayout />}>
             <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
+            <Route path="/signup" element={<Register />} />
             <Route path="/confirm-email" element={<ConfirmEmail />} />
             <Route path="/verify-login-otp" element={<VerifyLoginOtp />} />
           </Route>
           <Route element={<AppLayout />}>
-            <Route path="/" element={<Dashboard />} />
+            <Route path="/" element={<Navigate to="/home" replace />} />
+            <Route path="/home" element={<Dashboard />} />
             <Route path="/transfer" element={<Transfer />} />
             <Route path="/transactions" element={<Transactions />} />
             <Route path="/notifications" element={<Notifications />} />

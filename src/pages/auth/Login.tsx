@@ -32,7 +32,7 @@ export const Login: React.FC = () => {
 
       // 2. Redirect immediately after successful login
       if (data.session) {
-        navigate('/');
+        navigate('/home');
       }
     } catch (err: any) {
       setError(err.message || 'حدث خطأ غير متوقع');
@@ -88,7 +88,7 @@ export const Login: React.FC = () => {
 
       <div className="mt-10 text-center text-gray-500 font-medium">
         ليس لديك حساب؟{' '}
-        <Link to="/register" className="text-gray-900 font-bold hover:underline">
+        <Link to="/signup" className="text-gray-900 font-bold hover:underline">
           إنشاء حساب جديد
         </Link>
       </div>

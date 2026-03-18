@@ -55,7 +55,7 @@ export const Dashboard: React.FC = () => {
     }
   };
 
-  if (authLoading || !profile) return null;
+  if (authLoading) return <div className="flex justify-center p-8 text-gray-500">جاري التحميل...</div>;
 
   return (
     <div className="max-w-2xl mx-auto pt-2 md:pt-6 pb-20">

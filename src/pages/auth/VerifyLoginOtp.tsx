@@ -21,7 +21,7 @@ export const VerifyLoginOtp: React.FC = () => {
 
     const storageKey = `otpVerified_${user.id}`;
     if (!profile.requiresOtpOnLogin || localStorage.getItem(storageKey) === 'true') {
-      navigate('/');
+      navigate('/home');
       return;
     }
 
@@ -130,7 +130,7 @@ export const VerifyLoginOtp: React.FC = () => {
       // Mark as verified in local storage tied to user ID
       const storageKey = `otpVerified_${user.id}`;
       localStorage.setItem(storageKey, 'true');
-      navigate('/');
+      navigate('/home');
     } catch (err: any) {
       setError(err.message || 'حدث خطأ أثناء التحقق');
       setLoading(false);

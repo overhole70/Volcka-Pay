@@ -1,8 +1,9 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { db, doc, getDoc } from '../lib/firebase';
+import { db, doc, getDoc, setDoc } from '../lib/firebase';
 import { UserProfile } from '../types';
 import { User } from '@supabase/supabase-js';
+import { generateUniqueVolckaId } from '../lib/utils';
 
 interface AuthContextType {
   user: User | null;
@@ -19,9 +20,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchProfile = async (uid: string) => {
+  const fetchProfile = async (currentUser: User) => {
     try {
-      const docRef = doc(db, 'users', uid);
+      const docRef = doc(db, 'users', currentUser.id);
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
         const userData = docSnap.data() as UserProfile;
@@ -50,7 +51,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         })();
       } else {
-        setProfile(null);
+        // Create profile if it doesn't exist
+        const volckaId = await generateUniqueVolckaId();
+        const newUserProfile: UserProfile = {
+          uid: currentUser.id,
+          email: currentUser.email || '',
+          fullName: currentUser.user_metadata?.full_name || 'مستخدم',
+          balance: 0,
+          volckaId,
+          createdAt: new Date().toISOString(),
+          role: 'user'
+        };
+        
+        await setDoc(docRef, newUserProfile);
+        setProfile(newUserProfile);
         setLoading(false);
       }
     } catch (error) {
@@ -70,7 +84,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(currentUser);
       
       if (currentUser) {
-        fetchProfile(currentUser.id);
+        fetchProfile(currentUser);
       } else {
         setLoading(false);
       }
@@ -93,7 +107,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(currentUser);
       
       if (currentUser) {
-        fetchProfile(currentUser.id);
+        fetchProfile(currentUser);
       } else {
         setProfile(null);
         setLoading(false);
@@ -118,7 +132,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const refreshProfile = async () => {
     if (user) {
-      await fetchProfile(user.id);
+      await fetchProfile(user);
     }
   };
 
