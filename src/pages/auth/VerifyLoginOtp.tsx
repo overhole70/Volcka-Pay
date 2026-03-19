@@ -36,7 +36,7 @@ export const VerifyLoginOtp: React.FC = () => {
     if (loading) return;
     setLoading(true);
     try {
-      await fetch('/api/auth/send-otp', {
+      await fetch(`${import.meta.env.VITE_API_URL || ''}/api/auth/send-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: user?.email }),
@@ -115,7 +115,7 @@ export const VerifyLoginOtp: React.FC = () => {
     setError('');
 
     try {
-      const res = await fetch('/api/auth/verify-otp-only', {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/auth/verify-otp-only`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: user?.email, code: otpCode }),

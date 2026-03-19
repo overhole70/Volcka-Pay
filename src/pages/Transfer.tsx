@@ -54,7 +54,7 @@ export const Transfer: React.FC = () => {
       }
 
       // Generate and send OTP
-      const res = await fetch('/api/otp/generate', {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/otp/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: profile.email }),
@@ -76,7 +76,7 @@ export const Transfer: React.FC = () => {
   const handleVerifyOTP = async (code: string) => {
     if (!profile) return;
 
-    const res = await fetch('/api/otp/verify', {
+    const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/otp/verify`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: profile.email, code }),
@@ -94,7 +94,7 @@ export const Transfer: React.FC = () => {
 
   const handleResendOTP = async () => {
     if (!profile) return;
-    const res = await fetch('/api/otp/generate', {
+    const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/otp/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: profile.email }),

@@ -18,8 +18,10 @@ export const doc = (dbOrColl: any, nameOrId?: string, id?: string) => {
   return { type: 'doc', collection: nameOrId, id: id || generateId() };
 };
 
+const API_URL = import.meta.env.VITE_API_URL || '';
+
 export const getDoc = async (docRef: any) => {
-  const res = await fetch(`/api/firestore/${docRef.collection}/${docRef.id}`);
+  const res = await fetch(`${API_URL}/api/firestore/${docRef.collection}/${docRef.id}`);
   if (res.status === 404) return { exists: () => false, data: () => null };
   const data = await res.json();
   if (!res.ok) {
@@ -30,7 +32,7 @@ export const getDoc = async (docRef: any) => {
 
 export const getDocs = async (queryRef: any) => {
   const collName = queryRef.collection?.name || queryRef.name || queryRef.collName;
-  const res = await fetch(`/api/firestore/${collName}`);
+  const res = await fetch(`${API_URL}/api/firestore/${collName}`);
   let data = await res.json();
   if (!res.ok) {
     throw new Error(data.error || 'Failed to fetch documents');
@@ -74,7 +76,7 @@ export const getDocs = async (queryRef: any) => {
 };
 
 export const setDoc = async (docRef: any, data: any) => {
-  await fetch(`/api/firestore/${docRef.collection}/${docRef.id}`, {
+  await fetch(`${API_URL}/api/firestore/${docRef.collection}/${docRef.id}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
@@ -82,7 +84,7 @@ export const setDoc = async (docRef: any, data: any) => {
 };
 
 export const addDoc = async (collRef: any, data: any) => {
-  const res = await fetch(`/api/firestore/${collRef.name}`, {
+  const res = await fetch(`${API_URL}/api/firestore/${collRef.name}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
@@ -91,7 +93,7 @@ export const addDoc = async (collRef: any, data: any) => {
 };
 
 export const updateDoc = async (docRef: any, data: any) => {
-  await fetch(`/api/firestore/${docRef.collection}/${docRef.id}`, {
+  await fetch(`${API_URL}/api/firestore/${docRef.collection}/${docRef.id}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
@@ -114,12 +116,12 @@ export const limit = (n: number) => {
   return { type: 'limit', n };
 };
 
-export const onSnapshot = (ref: any, callback: any) => {
+export const onSnapshot = (ref: any, callback: any, errorCallback?: any) => {
   // Mock onSnapshot with a single fetch for now
   if (ref.type === 'doc') {
-    getDoc(ref).then(callback);
+    getDoc(ref).then(callback).catch(errorCallback || console.error);
   } else {
-    getDocs(ref).then(callback);
+    getDocs(ref).then(callback).catch(errorCallback || console.error);
   }
   return () => {}; // Unsubscribe mock
 };
