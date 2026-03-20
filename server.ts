@@ -80,14 +80,14 @@ app.post("/api/auth/send-otp", async (req, res) => {
     if (!email) return res.status(400).json({ error: "Missing email" });
 
     try {
-      // Check for recent OTP to prevent duplicates (30s cooldown)
+      // Check for existing valid OTP (5 minutes)
       const existingOtp = await db.collection("otps").doc(email).get();
       if (existingOtp.exists) {
         const data = existingOtp.data();
-        const lastSent = new Date(data?.createdAt || 0).getTime();
-        if (Date.now() - lastSent < 30000) {
-          console.log("OTP requested too soon for", email, "- skipping send");
-          return res.json({ success: true, message: "OTP already sent recently" });
+        const createdAt = new Date(data?.createdAt || 0).getTime();
+        if (Date.now() - createdAt < 300000 && !data?.verified) {
+          console.log("Reusing existing OTP for", email, "- skipping send");
+          return res.json({ success: true, message: "OTP already sent and is still valid" });
         }
       }
 
@@ -191,14 +191,14 @@ app.post("/api/auth/send-otp", async (req, res) => {
     if (!email) return res.status(400).json({ error: "Email is required" });
 
     try {
-      // Check for recent OTP to prevent duplicates (30s cooldown)
+      // Check for existing valid OTP (5 minutes)
       const existingOtp = await db.collection("otps").doc(email).get();
       if (existingOtp.exists) {
         const data = existingOtp.data();
-        const lastSent = new Date(data?.createdAt || 0).getTime();
-        if (Date.now() - lastSent < 30000) {
-          console.log("OTP requested too soon for", email, "- skipping send");
-          return res.json({ success: true, message: "OTP already sent recently" });
+        const createdAt = new Date(data?.createdAt || 0).getTime();
+        if (Date.now() - createdAt < 300000 && !data?.verified) {
+          console.log("Reusing existing OTP for", email, "- skipping send");
+          return res.json({ success: true, message: "OTP already sent and is still valid" });
         }
       }
 

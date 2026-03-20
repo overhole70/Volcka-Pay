@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { db, collection, getDocs, doc, updateDoc, getDoc, setDoc, addDoc, serverTimestamp } from '../lib/firebase';
 import { UserProfile, DepositRequest, AppSettings } from '../types';
-import { ShieldAlert, Users, Wallet, Settings, Ban, CheckCircle2, XCircle, Clock, HelpCircle, Send, Bell } from 'lucide-react';
+import { ShieldAlert, Users, Wallet, Settings, Ban, CheckCircle2, XCircle, Clock, HelpCircle, Send, Bell, AlertCircle, CheckCircle, Info, Gift, Star, MessageSquare, Zap, Search } from 'lucide-react';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { Navigate } from 'react-router-dom';
@@ -34,6 +34,14 @@ export const AdminDashboard: React.FC = () => {
   const [notificationModal, setNotificationModal] = useState<{ isOpen: boolean, userId: string, userName: string, title: string, message: string }>({
     isOpen: false, userId: '', userName: '', title: '', message: ''
   });
+
+  // New Notification Tab State
+  const [notificationAudience, setNotificationAudience] = useState<'all' | 'specific'>('all');
+  const [notificationSearch, setNotificationSearch] = useState('');
+  const [selectedUsers, setSelectedUsers] = useState<UserProfile[]>([]);
+  const [notificationTitle, setNotificationTitle] = useState('');
+  const [notificationDesc, setNotificationDesc] = useState('');
+  const [notificationIcon, setNotificationIcon] = useState('Bell');
 
   useEffect(() => {
     if (user?.email === ADMIN_EMAIL || profile?.role === 'admin') {
@@ -111,6 +119,45 @@ export const AdminDashboard: React.FC = () => {
       alert('تم إرسال الإشعار بنجاح');
     } catch (error) {
       console.error("Error sending notification:", error);
+      alert('حدث خطأ أثناء إرسال الإشعار');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleSendGlobalNotification = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!notificationTitle || !notificationDesc) return;
+    if (notificationAudience === 'specific' && selectedUsers.length === 0) {
+      alert('الرجاء تحديد مستخدم واحد على الأقل');
+      return;
+    }
+
+    setActionLoading('send-global-notification');
+    try {
+      const targetUsers = notificationAudience === 'all' ? users : selectedUsers;
+      
+      const promises = targetUsers.map(u => 
+        addDoc(collection(db, 'notifications'), {
+          user_id: u.uid,
+          title: notificationTitle,
+          message: notificationDesc,
+          type: 'admin',
+          icon: notificationIcon,
+          read: false,
+          created_at: new Date().toISOString()
+        })
+      );
+
+      await Promise.all(promises);
+      
+      setNotificationTitle('');
+      setNotificationDesc('');
+      setSelectedUsers([]);
+      setNotificationSearch('');
+      alert('تم إرسال الإشعار بنجاح');
+    } catch (error) {
+      console.error("Error sending global notification:", error);
       alert('حدث خطأ أثناء إرسال الإشعار');
     } finally {
       setActionLoading(null);
@@ -264,6 +311,15 @@ export const AdminDashboard: React.FC = () => {
         >
           <Settings size={20} />
           الإعدادات
+        </button>
+        <button
+          onClick={() => setActiveTab('notifications' as any)}
+          className={`flex items-center gap-2 px-6 py-3 rounded-full font-bold whitespace-nowrap transition-colors ${
+            activeTab === 'notifications' as any ? 'bg-indigo-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'
+          }`}
+        >
+          <Send size={20} />
+          إرسال إشعار
         </button>
       </div>
 
@@ -485,6 +541,157 @@ export const AdminDashboard: React.FC = () => {
                   لا توجد شكاوى أو طلبات دعم
                 </div>
               )}
+            </div>
+          )}
+
+          {activeTab === 'notifications' as any && (
+            <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 md:p-8 max-w-3xl">
+              <form onSubmit={handleSendGlobalNotification} className="space-y-6">
+                <div>
+                  <label className="block text-sm font-bold text-gray-900 mb-3">الجمهور المستهدف</label>
+                  <div className="flex gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input 
+                        type="radio" 
+                        name="audience" 
+                        checked={notificationAudience === 'all'}
+                        onChange={() => setNotificationAudience('all')}
+                        className="w-5 h-5 text-indigo-600 border-gray-300 focus:ring-indigo-500"
+                      />
+                      <span className="font-medium text-gray-700">جميع المستخدمين</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input 
+                        type="radio" 
+                        name="audience" 
+                        checked={notificationAudience === 'specific'}
+                        onChange={() => setNotificationAudience('specific')}
+                        className="w-5 h-5 text-indigo-600 border-gray-300 focus:ring-indigo-500"
+                      />
+                      <span className="font-medium text-gray-700">مستخدمين محددين</span>
+                    </label>
+                  </div>
+                </div>
+
+                {notificationAudience === 'specific' && (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-bold text-gray-900 mb-2">البحث عن مستخدمين</label>
+                      <div className="relative">
+                        <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                        <input
+                          type="text"
+                          value={notificationSearch}
+                          onChange={(e) => setNotificationSearch(e.target.value)}
+                          placeholder="ابحث بالاسم أو البريد الإلكتروني..."
+                          className="w-full pl-4 pr-12 py-3 rounded-2xl border-2 border-gray-100 focus:ring-0 focus:border-indigo-500 transition-colors bg-gray-50 outline-none"
+                        />
+                      </div>
+                    </div>
+                    
+                    {notificationSearch && (
+                      <div className="max-h-48 overflow-y-auto bg-gray-50 rounded-2xl border border-gray-100 p-2 space-y-1">
+                        {users.filter(u => 
+                          (u.fullName?.toLowerCase().includes(notificationSearch.toLowerCase()) || 
+                           u.email?.toLowerCase().includes(notificationSearch.toLowerCase())) &&
+                          !selectedUsers.find(su => su.uid === u.uid)
+                        ).slice(0, 5).map(u => (
+                          <button
+                            key={u.uid}
+                            type="button"
+                            onClick={() => {
+                              setSelectedUsers([...selectedUsers, u]);
+                              setNotificationSearch('');
+                            }}
+                            className="w-full text-right px-4 py-2 hover:bg-white rounded-xl transition-colors flex justify-between items-center"
+                          >
+                            <span className="font-medium text-gray-900">{u.fullName || 'غير محدد'}</span>
+                            <span className="text-sm text-gray-500" dir="ltr">{u.email}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {selectedUsers.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {selectedUsers.map(u => (
+                          <div key={u.uid} className="bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-xl flex items-center gap-2 text-sm font-medium">
+                            {u.fullName || u.email}
+                            <button 
+                              type="button" 
+                              onClick={() => setSelectedUsers(selectedUsers.filter(su => su.uid !== u.uid))}
+                              className="hover:text-indigo-900"
+                            >
+                              <XCircle size={16} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-sm font-bold text-gray-900 mb-2">عنوان الإشعار</label>
+                  <input
+                    type="text"
+                    value={notificationTitle}
+                    onChange={(e) => setNotificationTitle(e.target.value)}
+                    required
+                    placeholder="مثال: تحديث جديد، عرض خاص..."
+                    className="w-full px-5 py-4 rounded-2xl border-2 border-gray-100 focus:ring-0 focus:border-indigo-500 transition-colors bg-gray-50 outline-none text-lg"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold text-gray-900 mb-2">محتوى الإشعار</label>
+                  <textarea
+                    value={notificationDesc}
+                    onChange={(e) => setNotificationDesc(e.target.value)}
+                    required
+                    placeholder="اكتب تفاصيل الإشعار هنا..."
+                    className="w-full px-5 py-4 rounded-2xl border-2 border-gray-100 focus:ring-0 focus:border-indigo-500 transition-colors bg-gray-50 outline-none text-lg min-h-[120px] resize-y"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold text-gray-900 mb-3">أيقونة الإشعار</label>
+                  <div className="grid grid-cols-4 sm:grid-cols-8 gap-3">
+                    {[
+                      { id: 'Bell', icon: Bell },
+                      { id: 'AlertCircle', icon: AlertCircle },
+                      { id: 'CheckCircle', icon: CheckCircle },
+                      { id: 'Info', icon: Info },
+                      { id: 'Gift', icon: Gift },
+                      { id: 'Star', icon: Star },
+                      { id: 'MessageSquare', icon: MessageSquare },
+                      { id: 'Zap', icon: Zap }
+                    ].map(({ id, icon: Icon }) => (
+                      <button
+                        key={id}
+                        type="button"
+                        onClick={() => setNotificationIcon(id)}
+                        className={`aspect-square flex items-center justify-center rounded-2xl border-2 transition-all ${
+                          notificationIcon === id 
+                            ? 'border-indigo-600 bg-indigo-50 text-indigo-600' 
+                            : 'border-gray-100 bg-gray-50 text-gray-400 hover:border-gray-200 hover:text-gray-600'
+                        }`}
+                      >
+                        <Icon size={24} />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={actionLoading === 'send-global-notification'}
+                  className="bg-indigo-600 text-white px-8 py-4 rounded-2xl font-bold text-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2 w-full"
+                >
+                  {actionLoading === 'send-global-notification' ? <Clock className="animate-spin" size={20} /> : <Send size={20} />}
+                  إرسال الإشعار
+                </button>
+              </form>
             </div>
           )}
 

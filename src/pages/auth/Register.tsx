@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { User, Mail, Lock, Loader2, AlertCircle } from 'lucide-react';
+import { Turnstile } from '@marsidev/react-turnstile';
 
 export const Register: React.FC = () => {
   const [fullName, setFullName] = useState('');
@@ -10,10 +11,16 @@ export const Register: React.FC = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const navigate = useNavigate();
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!captchaToken) {
+      setError('الرجاء التحقق من الكابتشا');
+      return;
+    }
     
     if (password !== confirmPassword) {
       setError('كلمة المرور وتأكيد كلمة المرور غير متطابقين');
@@ -145,9 +152,18 @@ export const Register: React.FC = () => {
           </div>
         </div>
 
+        <div className="flex justify-center mt-4">
+          <Turnstile
+            siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY || ''}
+            onSuccess={(token) => setCaptchaToken(token)}
+            onError={() => setError('فشل التحقق من الكابتشا')}
+            onExpire={() => setCaptchaToken(null)}
+          />
+        </div>
+
         <button
           type="submit"
-          disabled={loading}
+          disabled={loading || !captchaToken}
           className="w-full bg-gray-900 hover:bg-gray-800 text-white py-4 rounded-2xl font-bold text-base shadow-sm active:scale-[0.98] transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-8"
         >
           {loading ? (
