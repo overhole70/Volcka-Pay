@@ -5,7 +5,7 @@ import { Send, ArrowDownLeft, ArrowUpRight, Copy, CheckCircle2, Clock, List, Wal
 import { db, collection, query, where, orderBy, limit, getDocs } from '../lib/firebase';
 import { Transaction } from '../types';
 import { format } from 'date-fns';
-import { ar } from 'date-fns/locale';
+import { arMA as ar } from 'date-fns/locale';
 
 export const Dashboard: React.FC = () => {
   const { profile, loading: authLoading } = useAuth();

@@ -27,6 +27,17 @@ export interface DepositRequest {
   binanceName: string;
   transferTime: string;
   orderId: string;
+  amount?: number;
+  status: 'pending' | 'approved' | 'rejected';
+  createdAt: string;
+}
+
+export interface WithdrawalRequest {
+  id: string;
+  userId: string;
+  userVolckaId: string;
+  userName: string;
+  binanceId: string;
   amount: number;
   status: 'pending' | 'approved' | 'rejected';
   createdAt: string;

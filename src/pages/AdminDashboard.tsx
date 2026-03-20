@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { db, collection, getDocs, doc, updateDoc, getDoc, setDoc, addDoc, serverTimestamp } from '../lib/firebase';
-import { UserProfile, DepositRequest, AppSettings } from '../types';
+import { UserProfile, DepositRequest, AppSettings, WithdrawalRequest } from '../types';
 import { ShieldAlert, Users, Wallet, Settings, Ban, CheckCircle2, XCircle, Clock, HelpCircle, Send, Bell, AlertCircle, CheckCircle, Info, Gift, Star, MessageSquare, Zap, Search } from 'lucide-react';
 import { format } from 'date-fns';
-import { ar } from 'date-fns/locale';
+import { arMA as ar } from 'date-fns/locale';
 import { Navigate } from 'react-router-dom';
 
 // Define admin email clearly
@@ -23,14 +23,16 @@ interface SupportTicket {
 
 export const AdminDashboard: React.FC = () => {
   const { profile, user, loading: authLoading } = useAuth();
-  const [activeTab, setActiveTab] = useState<'users' | 'deposits' | 'support' | 'settings'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'deposits' | 'withdrawals' | 'support' | 'settings' | 'notifications'>('users');
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [depositRequests, setDepositRequests] = useState<DepositRequest[]>([]);
+  const [withdrawalRequests, setWithdrawalRequests] = useState<WithdrawalRequest[]>([]);
   const [supportTickets, setSupportTickets] = useState<SupportTicket[]>([]);
   const [settings, setSettings] = useState<AppSettings>({ binanceId: '1171444753', adminEmail: ADMIN_EMAIL });
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [replyText, setReplyText] = useState<{ [key: string]: string }>({});
+  const [depositAmounts, setDepositAmounts] = useState<{ [key: string]: string }>({});
   const [notificationModal, setNotificationModal] = useState<{ isOpen: boolean, userId: string, userName: string, title: string, message: string }>({
     isOpen: false, userId: '', userName: '', title: '', message: ''
   });
@@ -62,6 +64,12 @@ export const AdminDashboard: React.FC = () => {
       const deposits = depositsSnap.docs.map(d => ({ id: d.id, ...d.data() } as DepositRequest));
       deposits.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       setDepositRequests(deposits);
+
+      // Fetch Withdrawal Requests
+      const withdrawalsSnap = await getDocs(collection(db, 'withdrawal_requests'));
+      const withdrawals = withdrawalsSnap.docs.map(d => ({ id: d.id, ...d.data() } as WithdrawalRequest));
+      withdrawals.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      setWithdrawalRequests(withdrawals);
 
       // Fetch Support Tickets
       const ticketsSnap = await getDocs(collection(db, 'support_tickets'));
@@ -191,10 +199,18 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
-  const handleDepositAction = async (requestId: string, status: 'approved' | 'rejected', userId: string, amount: number) => {
+  const handleDepositAction = async (requestId: string, status: 'approved' | 'rejected', userId: string) => {
+    const amountStr = depositAmounts[requestId];
+    const amount = parseFloat(amountStr);
+
+    if (status === 'approved' && (isNaN(amount) || amount <= 0)) {
+      alert('الرجاء إدخال مبلغ صحيح');
+      return;
+    }
+
     setActionLoading(`deposit-${requestId}`);
     try {
-      await updateDoc(doc(db, 'deposit_requests', requestId), { status });
+      await updateDoc(doc(db, 'deposit_requests', requestId), { status, amount: status === 'approved' ? amount : 0 });
       
       if (status === 'approved') {
         // Update user balance
@@ -216,8 +232,8 @@ export const AdminDashboard: React.FC = () => {
         user_id: userId,
         title: status === 'approved' ? 'تمت الموافقة على الإيداع' : 'تم رفض الإيداع',
         message: status === 'approved' 
-          ? `تمت الموافقة على إيداع مبلغ ${amount} دولار وإضافته لرصيدك` 
-          : `تم رفض طلب إيداع مبلغ ${amount} دولار`,
+          ? `تمت الموافقة على إيداع مبلغ ${amount.toLocaleString('en-US', { minimumFractionDigits: 2 })} دولار وإضافته لرصيدك` 
+          : `تم رفض طلب الإيداع الخاص بك`,
         type: 'deposit',
         icon: status === 'approved' ? 'CheckCircle' : 'AlertCircle',
         read: false,
@@ -225,9 +241,57 @@ export const AdminDashboard: React.FC = () => {
         expiresAt: expiresAt.toISOString()
       });
 
-      setDepositRequests(depositRequests.map(req => req.id === requestId ? { ...req, status } : req));
+      setDepositRequests(depositRequests.map(req => req.id === requestId ? { ...req, status, amount: status === 'approved' ? amount : req.amount } : req));
     } catch (error) {
       console.error("Error updating deposit request:", error);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleWithdrawalAction = async (requestId: string, status: 'approved' | 'rejected', userId: string, amount: number) => {
+    setActionLoading(`withdrawal-${requestId}`);
+    try {
+      await updateDoc(doc(db, 'withdrawal_requests', requestId), { status });
+      
+      if (status === 'approved') {
+        // Update user balance
+        const userDoc = await getDoc(doc(db, 'users', userId));
+        if (userDoc.exists()) {
+          const currentBalance = userDoc.data().balance || 0;
+          if (currentBalance >= amount) {
+            await updateDoc(doc(db, 'users', userId), {
+              balance: currentBalance - amount
+            });
+          } else {
+            alert('الرصيد غير كافٍ لإتمام عملية السحب');
+            setActionLoading(null);
+            return;
+          }
+        }
+      }
+      
+      // Create notification for withdrawal status
+      const now = new Date();
+      const expiresAt = new Date(now);
+      expiresAt.setDate(now.getDate() + 3);
+
+      await addDoc(collection(db, 'notifications'), {
+        user_id: userId,
+        title: status === 'approved' ? 'تمت الموافقة على السحب' : 'تم رفض السحب',
+        message: status === 'approved' 
+          ? `تمت الموافقة على سحب مبلغ ${amount.toLocaleString('en-US', { minimumFractionDigits: 2 })} دولار من رصيدك` 
+          : `تم رفض طلب سحب مبلغ ${amount.toLocaleString('en-US', { minimumFractionDigits: 2 })} دولار`,
+        type: 'transfer',
+        icon: status === 'approved' ? 'CheckCircle' : 'AlertCircle',
+        read: false,
+        created_at: now.toISOString(),
+        expiresAt: expiresAt.toISOString()
+      });
+
+      setWithdrawalRequests(withdrawalRequests.map(req => req.id === requestId ? { ...req, status } : req));
+    } catch (error) {
+      console.error("Error updating withdrawal request:", error);
     } finally {
       setActionLoading(null);
     }
@@ -311,6 +375,20 @@ export const AdminDashboard: React.FC = () => {
           {depositRequests.filter(r => r.status === 'pending').length > 0 && (
             <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full ml-1">
               {depositRequests.filter(r => r.status === 'pending').length}
+            </span>
+          )}
+        </button>
+        <button
+          onClick={() => setActiveTab('withdrawals')}
+          className={`flex items-center gap-2 px-6 py-3 rounded-full font-bold whitespace-nowrap transition-colors ${
+            activeTab === 'withdrawals' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'
+          }`}
+        >
+          <Wallet size={20} />
+          طلبات السحب
+          {withdrawalRequests.filter(r => r.status === 'pending').length > 0 && (
+            <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full ml-1">
+              {withdrawalRequests.filter(r => r.status === 'pending').length}
             </span>
           )}
         </button>
@@ -474,7 +552,23 @@ export const AdminDashboard: React.FC = () => {
                   <div className="grid grid-cols-2 gap-3">
                     <div className="bg-gray-50 p-3 rounded-2xl">
                       <p className="text-xs text-gray-500 mb-1">المبلغ</p>
-                      <p className="font-black text-emerald-600" dir="ltr">${req.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
+                      {req.status === 'pending' ? (
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-bold">$</span>
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={depositAmounts[req.id] || ''}
+                            onChange={(e) => setDepositAmounts({ ...depositAmounts, [req.id]: e.target.value })}
+                            className="w-full pl-8 pr-3 py-1.5 bg-white border border-gray-200 rounded-xl text-gray-900 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none font-black text-emerald-600"
+                            dir="ltr"
+                            placeholder="0.00"
+                          />
+                        </div>
+                      ) : (
+                        <p className="font-black text-emerald-600" dir="ltr">${(req.amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
+                      )}
                     </div>
                     <div className="bg-gray-50 p-3 rounded-2xl">
                       <p className="text-xs text-gray-500 mb-1">وقت التحويل</p>
@@ -512,6 +606,65 @@ export const AdminDashboard: React.FC = () => {
               {depositRequests.length === 0 && (
                 <div className="col-span-full p-8 text-center text-gray-500 bg-white rounded-3xl border border-gray-100">
                   لا توجد طلبات إيداع
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'withdrawals' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {withdrawalRequests.map(req => (
+                <div key={req.id} className="bg-white rounded-3xl border border-gray-100 shadow-sm p-5 flex flex-col gap-4">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h3 className="font-bold text-gray-900 text-lg">{req.userName || 'مستخدم'}</h3>
+                      <p className="text-gray-500 text-sm">Binance: {req.binanceId}</p>
+                    </div>
+                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                      req.status === 'approved' ? 'bg-emerald-50 text-emerald-600' : 
+                      req.status === 'rejected' ? 'bg-red-50 text-red-600' : 
+                      'bg-orange-50 text-orange-600'
+                    }`}>
+                      {req.status === 'approved' ? 'مقبول' : req.status === 'rejected' ? 'مرفوض' : 'قيد المعالجة'}
+                    </span>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-gray-50 p-3 rounded-2xl">
+                      <p className="text-xs text-gray-500 mb-1">المبلغ</p>
+                      <p className="font-black text-red-600" dir="ltr">${req.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
+                    </div>
+                    <div className="bg-gray-50 p-3 rounded-2xl">
+                      <p className="text-xs text-gray-500 mb-1">تاريخ الطلب</p>
+                      <p className="font-bold text-gray-900 text-sm">{new Date(req.createdAt).toLocaleDateString('en-US')}</p>
+                    </div>
+                  </div>
+
+                  {req.status === 'pending' && (
+                    <div className="flex gap-3 mt-2">
+                      <button
+                        onClick={() => handleWithdrawalAction(req.id, 'approved', req.userId, req.amount)}
+                        disabled={actionLoading === `withdrawal-${req.id}`}
+                        className="flex-1 py-3 bg-emerald-50 text-emerald-600 rounded-2xl font-bold hover:bg-emerald-100 transition-colors flex items-center justify-center gap-2"
+                      >
+                        <CheckCircle2 size={18} />
+                        موافقة
+                      </button>
+                      <button
+                        onClick={() => handleWithdrawalAction(req.id, 'rejected', req.userId, req.amount)}
+                        disabled={actionLoading === `withdrawal-${req.id}`}
+                        className="flex-1 py-3 bg-red-50 text-red-600 rounded-2xl font-bold hover:bg-red-100 transition-colors flex items-center justify-center gap-2"
+                      >
+                        <XCircle size={18} />
+                        رفض
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
+              {withdrawalRequests.length === 0 && (
+                <div className="col-span-full p-8 text-center text-gray-500 bg-white rounded-3xl border border-gray-100">
+                  لا توجد طلبات سحب
                 </div>
               )}
             </div>

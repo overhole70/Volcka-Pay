@@ -12,6 +12,7 @@ import { Login } from './pages/auth/Login';
 import { Register } from './pages/auth/Register';
 import { ConfirmEmail } from './pages/auth/ConfirmEmail';
 import { VerifyLoginOtp } from './pages/auth/VerifyLoginOtp';
+import { ResetPassword } from './pages/auth/ResetPassword';
 import { Dashboard } from './pages/Dashboard';
 import { Transfer } from './pages/Transfer';
 import { Transactions } from './pages/Transactions';
@@ -39,6 +40,7 @@ export default function App() {
             <Route path="/signup" element={<Register />} />
             <Route path="/confirm-email" element={<ConfirmEmail />} />
             <Route path="/verify-login-otp" element={<VerifyLoginOtp />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
           </Route>
           <Route element={<AppLayout />}>
             <Route path="/" element={<Navigate to="/home" replace />} />

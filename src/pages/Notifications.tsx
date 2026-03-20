@@ -3,7 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { db, collection, query, where, getDocs, doc, updateDoc } from '../lib/firebase';
 import { Notification } from '../types';
 import { format } from 'date-fns';
-import { ar } from 'date-fns/locale';
+import { arMA as ar } from 'date-fns/locale';
 import { Bell, CheckCircle2, AlertCircle, CheckCircle, Info, Gift, Star, MessageSquare, Zap, ShieldAlert, Key, ArrowRightLeft } from 'lucide-react';
 
 const iconMap: Record<string, React.ElementType> = {

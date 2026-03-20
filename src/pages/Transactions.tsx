@@ -3,7 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { db, collection, query, where, orderBy, getDocs } from '../lib/firebase';
 import { Transaction } from '../types';
 import { format } from 'date-fns';
-import { ar } from 'date-fns/locale';
+import { arMA as ar } from 'date-fns/locale';
 import { ArrowDownLeft, ArrowUpRight, Clock } from 'lucide-react';
 
 export const Transactions: React.FC = () => {

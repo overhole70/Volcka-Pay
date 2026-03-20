@@ -3,7 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { db, collection, query, where, orderBy, getDocs } from '../lib/firebase';
 import { Earning } from '../types';
 import { format } from 'date-fns';
-import { ar } from 'date-fns/locale';
+import { arMA as ar } from 'date-fns/locale';
 import { Coins, TrendingUp } from 'lucide-react';
 
 export const Earnings: React.FC = () => {

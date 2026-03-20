@@ -17,8 +17,7 @@ export const Deposit: React.FC = () => {
   const [formData, setFormData] = useState({
     binanceName: '',
     transferTime: '',
-    orderId: '',
-    amount: ''
+    orderId: ''
   });
 
   useEffect(() => {
@@ -115,7 +114,6 @@ export const Deposit: React.FC = () => {
         binanceName: formData.binanceName,
         transferTime: formData.transferTime,
         orderId: formData.orderId,
-        amount: parseFloat(formData.amount),
         status: 'pending',
         createdAt: new Date().toISOString()
       });
@@ -125,8 +123,7 @@ export const Deposit: React.FC = () => {
       setFormData({
         binanceName: '',
         transferTime: '',
-        orderId: '',
-        amount: ''
+        orderId: ''
       });
     } catch (err: any) {
       setError(err.message || 'حدث خطأ أثناء تقديم الطلب');
@@ -182,11 +179,11 @@ export const Deposit: React.FC = () => {
               <p className="text-gray-900 font-bold mb-4 text-center text-lg">
                 قم بتحويل المبلغ الذي تريد إيداعه بعملة USDT إلى معرف Binance التالي:
               </p>
-              <div className="flex items-center justify-center gap-4 bg-white p-4 rounded-xl border border-gray-200">
-                <span className="font-mono text-3xl font-black tracking-wider text-gray-900">{binanceId}</span>
+              <div className="flex items-center justify-between gap-4 bg-white p-4 rounded-xl border border-gray-200 overflow-hidden">
+                <span className="font-mono text-xl sm:text-3xl font-black tracking-wider text-gray-900 break-all">{binanceId}</span>
                 <button
                   onClick={handleCopy}
-                  className="p-3 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors text-gray-700 flex items-center gap-2"
+                  className="p-3 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors text-gray-700 flex items-center gap-2 shrink-0"
                 >
                   {copied ? <CheckCircle2 size={20} className="text-emerald-600" /> : <Copy size={20} />}
                   <span className="font-bold text-sm hidden sm:inline">{copied ? 'تم النسخ' : 'نسخ'}</span>
@@ -200,7 +197,7 @@ export const Deposit: React.FC = () => {
                 className="w-full bg-gray-900 text-white py-4 rounded-2xl font-bold text-lg hover:bg-gray-800 transition-colors flex items-center justify-center gap-2"
               >
                 <Upload size={20} />
-                تقديم طلب الإيداع
+                إرسال
               </button>
             ) : (
               <form onSubmit={handleDepositInitiate} className="space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -250,26 +247,6 @@ export const Deposit: React.FC = () => {
                         dir="ltr"
                       />
                     </div>
-
-                    <div>
-                      <label className="block text-sm font-bold text-gray-900 mb-2">المبلغ (USDT)</label>
-                      <div className="relative">
-                        <div className="absolute inset-y-0 right-0 pr-5 flex items-center pointer-events-none">
-                          <span className="text-gray-500 font-bold">$</span>
-                        </div>
-                        <input
-                          type="number"
-                          min="1"
-                          step="0.01"
-                          value={formData.amount}
-                          onChange={(e) => setFormData({...formData, amount: e.target.value})}
-                          required
-                          className="w-full pr-10 pl-5 py-4 rounded-2xl border-2 border-gray-100 focus:ring-0 focus:border-gray-900 transition-colors bg-white outline-none font-black text-lg"
-                          placeholder="0.00"
-                          dir="ltr"
-                        />
-                      </div>
-                    </div>
                   </div>
 
                   <div className="flex gap-3 mt-8">
@@ -286,7 +263,7 @@ export const Deposit: React.FC = () => {
                       className="flex-[2] bg-gray-900 text-white py-4 rounded-2xl font-bold text-lg hover:bg-gray-800 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                     >
                       {loading ? <Clock className="animate-spin" size={20} /> : <CheckCircle2 size={20} />}
-                      {loading ? 'جاري الإرسال...' : 'إرسال طلب الإيداع'}
+                      {loading ? 'جاري الإرسال...' : 'إرسال'}
                     </button>
                   </div>
                 </div>

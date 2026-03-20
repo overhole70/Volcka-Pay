@@ -30,18 +30,7 @@ export const Login: React.FC = () => {
         if (error.message.includes('Email not confirmed')) {
           navigate('/confirm-email', { state: { email, password } });
         } else if (error.message.includes('Invalid login credentials')) {
-          try {
-            const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/firestore/users`);
-            const users = await res.json();
-            const userExists = users.some((u: any) => u.email === email);
-            if (userExists) {
-              toast.error('كلمة المرور غير صحيحة');
-            } else {
-              toast.error('الحساب غير موجود');
-            }
-          } catch (e) {
-            toast.error('بيانات الدخول غير صحيحة');
-          }
+          toast.error('البريد الإلكتروني أو كلمة المرور غير صحيحة');
         } else {
           toast.error('حدث خطأ أثناء تسجيل الدخول');
         }
@@ -93,7 +82,30 @@ export const Login: React.FC = () => {
         </div>
 
         <div className="space-y-2">
-          <label className="block text-sm font-semibold text-gray-700">كلمة المرور</label>
+          <div className="flex justify-between items-center">
+            <label className="block text-sm font-semibold text-gray-700">كلمة المرور</label>
+            <button
+              type="button"
+              onClick={async () => {
+                if (!email) {
+                  toast.error('الرجاء إدخال البريد الإلكتروني أولاً');
+                  return;
+                }
+                try {
+                  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                    redirectTo: `${window.location.origin}/reset-password`,
+                  });
+                  if (error) throw error;
+                  toast.success('تم إرسال رابط إعادة تعيين كلمة المرور إلى بريدك الإلكتروني');
+                } catch (err: any) {
+                  toast.error(err.message || 'حدث خطأ أثناء إرسال رابط إعادة التعيين');
+                }
+              }}
+              className="text-xs font-bold text-indigo-600 hover:text-indigo-700 transition-colors"
+            >
+              نسيت كلمة المرور؟
+            </button>
+          </div>
           <div className="relative">
             <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none text-gray-400">
               <Lock size={20} />
