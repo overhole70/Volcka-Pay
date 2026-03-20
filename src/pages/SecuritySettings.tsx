@@ -38,7 +38,8 @@ export const SecuritySettings: React.FC = () => {
           user.id,
           'تغيير كلمة المرور',
           'تم تغيير كلمة المرور الخاصة بحسابك بنجاح.',
-          'security'
+          'security',
+          'Key'
         );
       }
     } catch (error: any) {

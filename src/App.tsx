@@ -26,10 +26,13 @@ import { Support } from './pages/Support';
 import { Deposit } from './pages/Deposit';
 import { AdminDashboard } from './pages/AdminDashboard';
 
+import { Toaster } from 'react-hot-toast';
+
 export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
+        <Toaster position="top-center" />
         <Routes>
           <Route element={<AuthLayout />}>
             <Route path="/login" element={<Login />} />

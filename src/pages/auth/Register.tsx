@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
-import { User, Mail, Lock, Loader2, AlertCircle } from 'lucide-react';
+import { User, Mail, Lock, Loader2 } from 'lucide-react';
 import { Turnstile } from '@marsidev/react-turnstile';
+import toast from 'react-hot-toast';
 
 export const Register: React.FC = () => {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -18,19 +18,32 @@ export const Register: React.FC = () => {
     e.preventDefault();
     
     if (!captchaToken) {
-      setError('الرجاء التحقق من الكابتشا');
+      toast.error('الرجاء التحقق من الكابتشا');
       return;
     }
     
     if (password !== confirmPassword) {
-      setError('كلمة المرور وتأكيد كلمة المرور غير متطابقين');
+      toast.error('كلمة المرور وتأكيد كلمة المرور غير متطابقين');
       return;
     }
 
     setLoading(true);
-    setError('');
 
     try {
+      // Check if user exists in our database first
+      try {
+        const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/firestore/users`);
+        const users = await res.json();
+        const userExists = users.some((u: any) => u.email === email);
+        if (userExists) {
+          toast.error('هذا البريد مستخدم بالفعل');
+          setLoading(false);
+          return;
+        }
+      } catch (e) {
+        // Ignore fetch error and proceed with Supabase signup
+      }
+
       const { data, error } = await supabase.auth.signUp({ 
         email, 
         password,
@@ -44,21 +57,24 @@ export const Register: React.FC = () => {
       
       if (error) {
         if (error.message.includes('already registered') || error.message.includes('User already exists')) {
-          throw new Error('هذا البريد مستخدم بالفعل');
+          toast.error('هذا البريد مستخدم بالفعل');
+          return;
         }
-        throw new Error(error.message || 'حدث خطأ أثناء التسجيل');
+        toast.error('حدث خطأ أثناء التسجيل');
+        return;
       }
 
       // Supabase returns a user with empty identities if the email already exists and email confirmations are enabled
       if (data?.user && data.user.identities && data.user.identities.length === 0) {
-        throw new Error('هذا البريد مستخدم بالفعل');
+        toast.error('هذا البريد مستخدم بالفعل');
+        return;
       }
 
       if (data.user) {
         navigate('/confirm-email', { state: { email, password } });
       }
     } catch (err: any) {
-      setError(err.message || 'حدث خطأ أثناء التسجيل');
+      toast.error('حدث خطأ أثناء التسجيل');
     } finally {
       setLoading(false);
     }
@@ -70,13 +86,6 @@ export const Register: React.FC = () => {
         <h2 className="text-2xl font-bold text-gray-900 tracking-tight">إنشاء حساب جديد</h2>
         <p className="text-sm text-gray-500 mt-2 font-medium">ابدأ رحلتك المالية معنا اليوم</p>
       </div>
-      
-      {error && (
-        <div className="bg-red-50/80 border border-red-100 text-red-600 p-4 rounded-2xl text-sm mb-6 flex items-center gap-3">
-          <AlertCircle size={20} className="shrink-0" />
-          <span className="font-medium">{error}</span>
-        </div>
-      )}
 
       <form onSubmit={handleRegister} className="space-y-5">
         <div className="space-y-2">
@@ -156,7 +165,7 @@ export const Register: React.FC = () => {
           <Turnstile
             siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY || ''}
             onSuccess={(token) => setCaptchaToken(token)}
-            onError={() => setError('فشل التحقق من الكابتشا')}
+            onError={() => toast.error('فشل التحقق من الكابتشا')}
             onExpire={() => setCaptchaToken(null)}
           />
         </div>

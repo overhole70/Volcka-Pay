@@ -42,6 +42,7 @@ export const AdminDashboard: React.FC = () => {
   const [notificationTitle, setNotificationTitle] = useState('');
   const [notificationDesc, setNotificationDesc] = useState('');
   const [notificationIcon, setNotificationIcon] = useState('Bell');
+  const [notificationDuration, setNotificationDuration] = useState('3_days');
 
   useEffect(() => {
     if (user?.email === ADMIN_EMAIL || profile?.role === 'admin') {
@@ -137,6 +138,17 @@ export const AdminDashboard: React.FC = () => {
     try {
       const targetUsers = notificationAudience === 'all' ? users : selectedUsers;
       
+      const now = new Date();
+      let expiresAt = new Date(now);
+      switch (notificationDuration) {
+        case '1_hour': expiresAt.setHours(now.getHours() + 1); break;
+        case '1_day': expiresAt.setDate(now.getDate() + 1); break;
+        case '3_days': expiresAt.setDate(now.getDate() + 3); break;
+        case '1_week': expiresAt.setDate(now.getDate() + 7); break;
+        case '1_month': expiresAt.setMonth(now.getMonth() + 1); break;
+        default: expiresAt.setDate(now.getDate() + 3); break;
+      }
+      
       const promises = targetUsers.map(u => 
         addDoc(collection(db, 'notifications'), {
           user_id: u.uid,
@@ -145,7 +157,8 @@ export const AdminDashboard: React.FC = () => {
           type: 'admin',
           icon: notificationIcon,
           read: false,
-          created_at: new Date().toISOString()
+          created_at: now.toISOString(),
+          expiresAt: expiresAt.toISOString()
         })
       );
 
@@ -195,6 +208,10 @@ export const AdminDashboard: React.FC = () => {
       }
       
       // Create notification for deposit status
+      const now = new Date();
+      const expiresAt = new Date(now);
+      expiresAt.setDate(now.getDate() + 3); // Default 3 days expiration
+
       await addDoc(collection(db, 'notifications'), {
         user_id: userId,
         title: status === 'approved' ? 'تمت الموافقة على الإيداع' : 'تم رفض الإيداع',
@@ -202,8 +219,10 @@ export const AdminDashboard: React.FC = () => {
           ? `تمت الموافقة على إيداع مبلغ ${amount} دولار وإضافته لرصيدك` 
           : `تم رفض طلب إيداع مبلغ ${amount} دولار`,
         type: 'deposit',
+        icon: status === 'approved' ? 'CheckCircle' : 'AlertCircle',
         read: false,
-        created_at: new Date().toISOString()
+        created_at: now.toISOString(),
+        expiresAt: expiresAt.toISOString()
       });
 
       setDepositRequests(depositRequests.map(req => req.id === requestId ? { ...req, status } : req));
@@ -221,13 +240,19 @@ export const AdminDashboard: React.FC = () => {
     setActionLoading(`reply-${ticketId}`);
     try {
       // Create notification
+      const now = new Date();
+      const expiresAt = new Date(now);
+      expiresAt.setDate(now.getDate() + 3); // Default 3 days expiration
+
       await addDoc(collection(db, 'notifications'), {
         user_id: userId,
         title: 'رد من الدعم',
         message: text,
         type: 'admin',
+        icon: 'MessageSquare',
         read: false,
-        created_at: new Date().toISOString(),
+        created_at: now.toISOString(),
+        expiresAt: expiresAt.toISOString()
       });
 
       // Update ticket status
@@ -681,6 +706,21 @@ export const AdminDashboard: React.FC = () => {
                       </button>
                     ))}
                   </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold text-gray-900 mb-3">مدة صلاحية الإشعار</label>
+                  <select
+                    value={notificationDuration}
+                    onChange={(e) => setNotificationDuration(e.target.value)}
+                    className="w-full px-5 py-4 rounded-2xl border-2 border-gray-100 focus:ring-0 focus:border-indigo-500 transition-colors bg-gray-50 outline-none text-lg"
+                  >
+                    <option value="1_hour">ساعة واحدة</option>
+                    <option value="1_day">يوم واحد</option>
+                    <option value="3_days">3 أيام</option>
+                    <option value="1_week">أسبوع واحد</option>
+                    <option value="1_month">شهر واحد</option>
+                  </select>
                 </div>
 
                 <button

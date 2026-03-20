@@ -18,7 +18,13 @@ export const AppLayout: React.FC = () => {
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      setUnreadCount(snapshot.docs.length);
+      const now = new Date().getTime();
+      const validDocs = snapshot.docs.filter(doc => {
+        const data = doc.data();
+        if (!data.expiresAt) return true;
+        return new Date(data.expiresAt).getTime() > now;
+      });
+      setUnreadCount(validDocs.length);
     }, (error) => {
       console.error("Error fetching unread notifications:", error);
     });

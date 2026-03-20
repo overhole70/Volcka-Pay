@@ -45,6 +45,8 @@ export interface Notification {
   type: 'transfer' | 'deposit' | 'security' | 'admin' | 'system';
   read: boolean;
   created_at: string;
+  icon?: string;
+  expiresAt?: string;
 }
 
 export interface Ad {

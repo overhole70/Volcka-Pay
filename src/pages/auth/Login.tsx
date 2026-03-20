@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
-import { Mail, Lock, Loader2, AlertCircle } from 'lucide-react';
+import { Mail, Lock, Loader2 } from 'lucide-react';
 import { createNotification } from '../../lib/notifications';
 import { Turnstile } from '@marsidev/react-turnstile';
+import toast from 'react-hot-toast';
 
 export const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -17,12 +17,11 @@ export const Login: React.FC = () => {
     e.preventDefault();
     
     if (!captchaToken) {
-      setError('الرجاء التحقق من الكابتشا');
+      toast.error('الرجاء التحقق من الكابتشا');
       return;
     }
 
     setLoading(true);
-    setError('');
 
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
@@ -31,9 +30,20 @@ export const Login: React.FC = () => {
         if (error.message.includes('Email not confirmed')) {
           navigate('/confirm-email', { state: { email, password } });
         } else if (error.message.includes('Invalid login credentials')) {
-          setError('بيانات الدخول غير صحيحة');
+          try {
+            const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/firestore/users`);
+            const users = await res.json();
+            const userExists = users.some((u: any) => u.email === email);
+            if (userExists) {
+              toast.error('كلمة المرور غير صحيحة');
+            } else {
+              toast.error('الحساب غير موجود');
+            }
+          } catch (e) {
+            toast.error('بيانات الدخول غير صحيحة');
+          }
         } else {
-          setError(error.message || 'حدث خطأ أثناء تسجيل الدخول');
+          toast.error('حدث خطأ أثناء تسجيل الدخول');
         }
         setLoading(false);
         return;
@@ -45,12 +55,13 @@ export const Login: React.FC = () => {
           data.user.id,
           'تسجيل دخول جديد',
           'تم تسجيل الدخول إلى حسابك بنجاح.',
-          'security'
+          'security',
+          'ShieldAlert'
         );
         navigate('/home');
       }
     } catch (err: any) {
-      setError(err.message || 'حدث خطأ غير متوقع');
+      toast.error('حدث خطأ غير متوقع');
       setLoading(false);
     }
   };
@@ -61,13 +72,6 @@ export const Login: React.FC = () => {
         <h2 className="text-2xl font-bold text-gray-900 tracking-tight">تسجيل الدخول</h2>
         <p className="text-sm text-gray-500 mt-2 font-medium">مرحباً بك مجدداً في حسابك</p>
       </div>
-      
-      {error && (
-        <div className="bg-red-50/80 border border-red-100 text-red-600 p-4 rounded-2xl text-sm mb-6 flex items-center gap-3">
-          <AlertCircle size={20} className="shrink-0" />
-          <span className="font-medium">{error}</span>
-        </div>
-      )}
 
       <form onSubmit={handleLogin} className="space-y-5">
         <div className="space-y-2">
@@ -110,7 +114,7 @@ export const Login: React.FC = () => {
           <Turnstile
             siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY || ''}
             onSuccess={(token) => setCaptchaToken(token)}
-            onError={() => setError('فشل التحقق من الكابتشا')}
+            onError={() => toast.error('فشل التحقق من الكابتشا')}
             onExpire={() => setCaptchaToken(null)}
           />
         </div>

@@ -144,13 +144,19 @@ export const Transfer: React.FC = () => {
 
         // Create notification for receiver
         const notifRef = doc(collection(db, 'notifications'));
+        const now = new Date();
+        const expiresAt = new Date(now);
+        expiresAt.setDate(now.getDate() + 3); // Default 3 days expiration
+
         transaction.set(notifRef, {
           user_id: receiverData.uid,
           title: 'استلام أموال',
           message: `تم استلام ${transferAmount} دولار من حساب ${profile.volckaId}`,
           type: 'transfer',
+          icon: 'ArrowRightLeft',
           read: false,
-          created_at: new Date().toISOString()
+          created_at: now.toISOString(),
+          expiresAt: expiresAt.toISOString()
         });
       });
 
