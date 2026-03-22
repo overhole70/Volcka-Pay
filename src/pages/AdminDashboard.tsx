@@ -584,7 +584,7 @@ export const AdminDashboard: React.FC = () => {
                   {req.status === 'pending' && (
                     <div className="flex gap-3 mt-2">
                       <button
-                        onClick={() => handleDepositAction(req.id, 'approved', req.userId, req.amount)}
+                        onClick={() => handleDepositAction(req.id, 'approved', req.userId)}
                         disabled={actionLoading === `deposit-${req.id}`}
                         className="flex-1 py-3 bg-emerald-50 text-emerald-600 rounded-2xl font-bold hover:bg-emerald-100 transition-colors flex items-center justify-center gap-2"
                       >
@@ -592,7 +592,7 @@ export const AdminDashboard: React.FC = () => {
                         موافقة
                       </button>
                       <button
-                        onClick={() => handleDepositAction(req.id, 'rejected', req.userId, req.amount)}
+                        onClick={() => handleDepositAction(req.id, 'rejected', req.userId)}
                         disabled={actionLoading === `deposit-${req.id}`}
                         className="flex-1 py-3 bg-red-50 text-red-600 rounded-2xl font-bold hover:bg-red-100 transition-colors flex items-center justify-center gap-2"
                       >

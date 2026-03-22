@@ -6,10 +6,18 @@ export const AuthLayout: React.FC = () => {
   const { user, loading } = useAuth();
   const location = useLocation();
 
+  const isRecovery = window.location.hash.includes('type=recovery');
+
   if (loading) return <div className="min-h-screen flex items-center justify-center">جاري التحميل...</div>;
   
-  if (user) {
-    if (user.email_confirmed_at) {
+  if (isRecovery && location.pathname !== '/reset-password' && location.pathname !== '/resetpassword') {
+    return <Navigate to={`/reset-password${window.location.hash}`} replace />;
+  }
+
+  if (user && !isRecovery) {
+    if (location.pathname === '/reset-password' || location.pathname === '/resetpassword') {
+      // Allow rendering Outlet for reset password
+    } else if (user.email_confirmed_at) {
       if (location.pathname !== '/verify-login-otp') {
         return <Navigate to="/home" replace />;
       }

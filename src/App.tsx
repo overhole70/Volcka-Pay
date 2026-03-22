@@ -41,6 +41,7 @@ export default function App() {
             <Route path="/confirm-email" element={<ConfirmEmail />} />
             <Route path="/verify-login-otp" element={<VerifyLoginOtp />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/resetpassword" element={<ResetPassword />} />
           </Route>
           <Route element={<AppLayout />}>
             <Route path="/" element={<Navigate to="/home" replace />} />

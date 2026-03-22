@@ -8,6 +8,12 @@ export const AppLayout: React.FC = () => {
   const { user, profile, loading } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
 
+  const isRecovery = window.location.hash.includes('type=recovery');
+
+  if (isRecovery) {
+    return <Navigate to={`/reset-password${window.location.hash}`} replace />;
+  }
+
   useEffect(() => {
     if (!profile) return;
 
