@@ -86,21 +86,7 @@ export const Login: React.FC = () => {
             <label className="block text-sm font-semibold text-gray-700">كلمة المرور</label>
             <button
               type="button"
-              onClick={async () => {
-                if (!email) {
-                  toast.error('الرجاء إدخال البريد الإلكتروني أولاً');
-                  return;
-                }
-                try {
-                  const { error } = await supabase.auth.resetPasswordForEmail(email, {
-                    redirectTo: `${window.location.origin}/reset-password`,
-                  });
-                  if (error) throw error;
-                  toast.success('تم إرسال رابط إعادة تعيين كلمة المرور إلى بريدك الإلكتروني');
-                } catch (err: any) {
-                  toast.error(err.message || 'حدث خطأ أثناء إرسال رابط إعادة التعيين');
-                }
-              }}
+              onClick={() => navigate('/reset-password')}
               className="text-xs font-bold text-indigo-600 hover:text-indigo-700 transition-colors"
             >
               نسيت كلمة المرور؟

@@ -71,6 +71,44 @@ export const Register: React.FC = () => {
       }
 
       if (data.user) {
+        // Create user in Firebase
+        try {
+          const { db, doc, setDoc } = await import('../../lib/firebase');
+          const userRef = doc(db, 'users', data.user.id);
+          
+          // Generate a unique Volcka ID
+          const generateUniqueVolckaId = async () => {
+            const { collection, getDocs, query, where } = await import('../../lib/firebase');
+            let isUnique = false;
+            let newId = '';
+            while (!isUnique) {
+              const randomNum = Math.floor(10000000 + Math.random() * 90000000);
+              newId = `V-${randomNum}`;
+              const q = query(collection(db, 'users'), where('volckaId', '==', newId));
+              const snapshot = await getDocs(q);
+              if (snapshot.empty) {
+                isUnique = true;
+              }
+            }
+            return newId;
+          };
+          
+          const volckaId = await generateUniqueVolckaId();
+          
+          await setDoc(userRef, {
+            uid: data.user.id,
+            email: email,
+            fullName: fullName,
+            balance: 0,
+            volckaId: volckaId,
+            createdAt: new Date().toISOString(),
+            role: 'user'
+          });
+        } catch (fbError) {
+          console.error("Error creating Firebase user:", fbError);
+          // Continue anyway, AuthContext will try to create it later
+        }
+
         navigate('/confirm-email', { state: { email, password } });
       }
     } catch (err: any) {

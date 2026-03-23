@@ -15,26 +15,7 @@ export const SecuritySettings: React.FC = () => {
   const [passwordMessage, setPasswordMessage] = useState({ type: '', text: '' });
 
   const handlePasswordReset = async () => {
-    if (!user?.email) return;
-
-    setUpdatingPassword(true);
-    setPasswordMessage({ type: '', text: '' });
-
-    try {
-      const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
-        redirectTo: `${window.location.origin}/reset-password`,
-      });
-      
-      if (error) throw error;
-      
-      setResetSent(true);
-      setPasswordMessage({ type: 'success', text: 'تم إرسال رابط إعادة تعيين كلمة المرور إلى بريدك الإلكتروني' });
-    } catch (error: any) {
-      console.error('Error sending reset email:', error);
-      setPasswordMessage({ type: 'error', text: error.message || 'حدث خطأ أثناء إرسال رابط إعادة التعيين' });
-    } finally {
-      setUpdatingPassword(false);
-    }
+    navigate('/reset-password');
   };
 
   const toggleOtpVerification = async () => {
