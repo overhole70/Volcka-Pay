@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Key, Loader2, ArrowRight, Mail, Lock, CheckCircle2, ArrowLeft } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { supabase } from '../../lib/supabase';
 
 export const ResetPassword = () => {
   const [step, setStep] = useState<1 | 2 | 3>(1);
@@ -10,27 +11,41 @@ export const ResetPassword = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [attempts, setAttempts] = useState(0);
+  const [cooldown, setCooldown] = useState(0);
+  const [lastRequestTime, setLastRequestTime] = useState(0);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (cooldown > 0) {
+      timer = setInterval(() => setCooldown((prev) => prev - 1), 1000);
+    }
+    return () => clearInterval(timer);
+  }, [cooldown]);
 
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email) return;
+    if (!email || loading || cooldown > 0) return;
+
+    const now = Date.now();
+    if (now - lastRequestTime < 2000) return; // 2 seconds debounce
+    setLastRequestTime(now);
 
     setLoading(true);
     try {
-      const res = await fetch('/api/otp/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
+      const { error } = await supabase.auth.signInWithOtp({
+        email: email,
       });
-      const data = await res.json();
       
-      if (!res.ok) throw new Error(data.error || 'حدث خطأ أثناء إرسال الكود');
+      if (error) throw error;
       
-      toast.success('تم إرسال رمز التحقق إلى بريدك الإلكتروني');
+      toast.success('تم إرسال الرمز إلى بريدك الإلكتروني');
       setStep(2);
+      setAttempts(0);
+      setCooldown(60);
     } catch (error: any) {
-      toast.error(error.message);
+      toast.error(error.message || 'حدث خطأ أثناء إرسال الكود');
     } finally {
       setLoading(false);
     }
@@ -38,26 +53,35 @@ export const ResetPassword = () => {
 
   const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (otp.length !== 6) {
-      toast.error('رمز التحقق يجب أن يتكون من 6 أرقام');
+    if (otp.length !== 8) {
+      toast.error('رمز التحقق يجب أن يكون 8 أرقام');
+      return;
+    }
+
+    if (attempts >= 3) {
+      toast.error('تم تجاوز الحد الأقصى للمحاولات. يرجى طلب رمز جديد.');
       return;
     }
 
     setLoading(true);
     try {
-      const res = await fetch('/api/otp/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, code: otp }),
+      const { data, error } = await supabase.auth.verifyOtp({
+        email: email,
+        token: otp,
+        type: 'email',
       });
-      const data = await res.json();
       
-      if (!res.ok) throw new Error(data.error || 'رمز التحقق غير صحيح');
+      if (error) {
+        setAttempts(prev => prev + 1);
+        throw error;
+      }
+      
+      if (!data.session) throw new Error('فشل في إنشاء الجلسة');
       
       toast.success('تم التحقق بنجاح');
       setStep(3);
     } catch (error: any) {
-      toast.error(error.message);
+      toast.error(error.message || 'رمز التحقق غير صحيح');
     } finally {
       setLoading(false);
     }
@@ -77,19 +101,16 @@ export const ResetPassword = () => {
 
     setLoading(true);
     try {
-      const res = await fetch('/api/auth/reset-password-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, code: otp, newPassword: password }),
+      const { error } = await supabase.auth.updateUser({
+        password: password,
       });
-      const data = await res.json();
       
-      if (!res.ok) throw new Error(data.error || 'حدث خطأ أثناء تغيير كلمة المرور');
+      if (error) throw error;
       
       toast.success('تم تغيير كلمة المرور بنجاح');
       navigate('/login', { replace: true });
     } catch (error: any) {
-      toast.error(error.message);
+      toast.error(error.message || 'حدث خطأ أثناء تغيير كلمة المرور');
     } finally {
       setLoading(false);
     }
@@ -116,7 +137,7 @@ export const ResetPassword = () => {
         
         <p className="text-center text-gray-500 text-sm mb-8">
           {step === 1 && 'أدخل بريدك الإلكتروني وسنرسل لك رمزاً لإعادة تعيين كلمة المرور.'}
-          {step === 2 && `أدخل الرمز المكون من 6 أرقام المرسل إلى ${email}`}
+          {step === 2 && `أدخل الرمز المكون من 8 أرقام المرسل إلى ${email}`}
           {step === 3 && 'قم بإنشاء كلمة مرور جديدة وقوية لحسابك.'}
         </p>
 
@@ -140,11 +161,13 @@ export const ResetPassword = () => {
 
             <button
               type="submit"
-              disabled={loading || !email}
+              disabled={loading || !email || cooldown > 0}
               className="w-full flex justify-center items-center gap-2 py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
               {loading ? (
                 <Loader2 size={20} className="animate-spin" />
+              ) : cooldown > 0 ? (
+                `يمكنك إعادة الإرسال بعد ${cooldown} ثانية`
               ) : (
                 <>
                   إرسال الكود
@@ -172,17 +195,17 @@ export const ResetPassword = () => {
                 type="text"
                 required
                 value={otp}
-                onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 8))}
                 className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none text-center text-2xl tracking-[0.5em] font-mono"
                 dir="ltr"
-                placeholder="••••••"
-                maxLength={6}
+                placeholder="••••••••"
+                maxLength={8}
               />
             </div>
 
             <button
               type="submit"
-              disabled={loading || otp.length !== 6}
+              disabled={loading || otp.length !== 8}
               className="w-full flex justify-center items-center gap-2 py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
               {loading ? (
@@ -207,10 +230,10 @@ export const ResetPassword = () => {
               <button 
                 type="button" 
                 onClick={handleSendOtp}
-                disabled={loading}
-                className="text-sm font-bold text-indigo-600 hover:text-indigo-500"
+                disabled={loading || cooldown > 0}
+                className="text-sm font-bold text-indigo-600 hover:text-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                إعادة إرسال الكود
+                {cooldown > 0 ? `إعادة الإرسال (${cooldown})` : 'إعادة إرسال الكود'}
               </button>
             </div>
           </form>

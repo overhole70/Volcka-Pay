@@ -1,22 +1,34 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { Shield, Key, Smartphone, ChevronRight, Loader2 } from 'lucide-react';
+import { Shield, Key, Smartphone, ChevronRight, Loader2, Lock, CheckCircle2, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { db, doc, updateDoc } from '../lib/firebase';
-import { createNotification } from '../lib/notifications';
+import toast from 'react-hot-toast';
 
 export const SecuritySettings: React.FC = () => {
   const { profile, user, refreshProfile } = useAuth();
   const navigate = useNavigate();
-  const [resetSent, setResetSent] = useState(false);
   const [updatingOtp, setUpdatingOtp] = useState(false);
-  const [updatingPassword, setUpdatingPassword] = useState(false);
-  const [passwordMessage, setPasswordMessage] = useState({ type: '', text: '' });
+  
+  // Password Change State
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [passwordStep, setPasswordStep] = useState<1 | 2>(1);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [otp, setOtp] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
+  const [attempts, setAttempts] = useState(0);
+  const [lastRequestTime, setLastRequestTime] = useState(0);
 
-  const handlePasswordReset = async () => {
-    navigate('/reset-password');
-  };
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (cooldown > 0) {
+      timer = setInterval(() => setCooldown((prev) => prev - 1), 1000);
+    }
+    return () => clearInterval(timer);
+  }, [cooldown]);
 
   const toggleOtpVerification = async () => {
     if (!profile?.uid) return;
@@ -29,10 +41,113 @@ export const SecuritySettings: React.FC = () => {
       await refreshProfile();
     } catch (error) {
       console.error('Error updating OTP settings:', error);
-      alert('حدث خطأ أثناء تحديث إعدادات الأمان');
+      toast.error('حدث خطأ أثناء تحديث إعدادات الأمان');
     } finally {
       setUpdatingOtp(false);
     }
+  };
+
+  const handleSendOtp = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    
+    if (newPassword.length < 6) {
+      toast.error('كلمة المرور يجب أن تكون 6 أحرف على الأقل');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      toast.error('كلمتا المرور غير متطابقتين');
+      return;
+    }
+
+    if (!user?.email || loading || cooldown > 0) return;
+
+    const now = Date.now();
+    if (now - lastRequestTime < 2000) return; // 2 seconds debounce
+    setLastRequestTime(now);
+
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email: user.email,
+      });
+      
+      if (error) throw error;
+      
+      toast.success('تم إرسال رمز التحقق إلى بريدك الإلكتروني');
+      setPasswordStep(2);
+      setAttempts(0);
+      setCooldown(60);
+    } catch (error: any) {
+      toast.error(error.message || 'حدث خطأ أثناء إرسال الكود');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyAndUpdatePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (otp.length !== 8) {
+      toast.error('رمز التحقق يجب أن يكون 8 أرقام');
+      return;
+    }
+
+    if (attempts >= 3) {
+      toast.error('تم تجاوز الحد الأقصى للمحاولات. يرجى طلب رمز جديد.');
+      return;
+    }
+
+    if (!user?.email) return;
+
+    setLoading(true);
+    try {
+      // 1. Verify OTP
+      const { data, error: verifyError } = await supabase.auth.verifyOtp({
+        email: user.email,
+        token: otp,
+        type: 'email',
+      });
+      
+      if (verifyError) {
+        setAttempts(prev => prev + 1);
+        throw verifyError;
+      }
+      
+      if (!data.session) throw new Error('فشل في إنشاء الجلسة');
+      
+      // 2. Update Password
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+      
+      if (updateError) throw updateError;
+      
+      toast.success('تم تغيير كلمة المرور بنجاح');
+      
+      // Reset state
+      setIsChangingPassword(false);
+      setPasswordStep(1);
+      setNewPassword('');
+      setConfirmPassword('');
+      setOtp('');
+    } catch (error: any) {
+      if (error.message?.includes('expired')) {
+        toast.error('انتهت صلاحية الرمز');
+      } else {
+        toast.error(error.message || 'رمز التحقق غير صحيح');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const cancelPasswordChange = () => {
+    setIsChangingPassword(false);
+    setPasswordStep(1);
+    setNewPassword('');
+    setConfirmPassword('');
+    setOtp('');
   };
 
   return (
@@ -110,42 +225,137 @@ export const SecuritySettings: React.FC = () => {
               <div className="mb-4">
                 <h3 className="text-base font-bold text-gray-900 mb-1">كلمة المرور</h3>
                 <p className="text-sm text-gray-500 font-medium leading-relaxed max-w-md">
-                  قم بتغيير كلمة المرور الخاصة بحسابك بانتظام لضمان حماية أفضل. سيتم إرسال رابط لإعادة التعيين إلى بريدك الإلكتروني.
+                  قم بتغيير كلمة المرور الخاصة بحسابك بانتظام لضمان حماية أفضل.
                 </p>
               </div>
               
-              <div className="space-y-4 max-w-md">
-                {passwordMessage.text && (
-                  <div className={`p-3 rounded-xl text-sm font-medium ${
-                    passwordMessage.type === 'error' ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'
-                  }`}>
-                    {passwordMessage.text}
-                  </div>
-                )}
-                
+              {!isChangingPassword ? (
                 <button
-                  onClick={handlePasswordReset}
-                  disabled={updatingPassword || resetSent}
-                  className="flex items-center justify-center gap-2 px-5 py-2.5 bg-gray-900 hover:bg-gray-800 text-white rounded-xl font-bold transition-all active:scale-95 disabled:opacity-50 text-sm w-full sm:w-auto"
+                  onClick={() => setIsChangingPassword(true)}
+                  className="flex items-center justify-center gap-2 px-5 py-2.5 bg-gray-900 hover:bg-gray-800 text-white rounded-xl font-bold transition-all active:scale-95 text-sm w-full sm:w-auto"
                 >
-                  {updatingPassword ? (
-                    <>
-                      <Loader2 size={16} className="animate-spin" />
-                      جاري الإرسال...
-                    </>
-                  ) : resetSent ? (
-                    <>
-                      <Key size={16} />
-                      تم إرسال الرابط
-                    </>
-                  ) : (
-                    <>
-                      <Key size={16} />
-                      إرسال رابط إعادة التعيين
-                    </>
-                  )}
+                  <Key size={16} />
+                  تغيير كلمة المرور
                 </button>
-              </div>
+              ) : (
+                <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100 mt-4">
+                  {passwordStep === 1 ? (
+                    <form onSubmit={handleSendOtp} className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-bold text-gray-900 mb-2">
+                          كلمة المرور الجديدة
+                        </label>
+                        <input
+                          type="password"
+                          required
+                          value={newPassword}
+                          onChange={(e) => setNewPassword(e.target.value)}
+                          className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
+                          dir="ltr"
+                          placeholder="••••••••"
+                          minLength={6}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-bold text-gray-900 mb-2">
+                          تأكيد كلمة المرور
+                        </label>
+                        <input
+                          type="password"
+                          required
+                          value={confirmPassword}
+                          onChange={(e) => setConfirmPassword(e.target.value)}
+                          className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
+                          dir="ltr"
+                          placeholder="••••••••"
+                          minLength={6}
+                        />
+                      </div>
+                      
+                      <div className="flex gap-3 pt-2">
+                        <button
+                          type="submit"
+                          disabled={loading || !newPassword || !confirmPassword || cooldown > 0}
+                          className="flex-1 flex justify-center items-center gap-2 py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                        >
+                          {loading ? (
+                            <Loader2 size={20} className="animate-spin" />
+                          ) : cooldown > 0 ? (
+                            `انتظر ${cooldown} ثانية`
+                          ) : (
+                            <>
+                              إرسال رمز التحقق
+                              <ArrowRight size={18} />
+                            </>
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={cancelPasswordChange}
+                          disabled={loading}
+                          className="px-4 py-3 bg-white border border-gray-200 text-gray-700 rounded-xl font-bold hover:bg-gray-50 transition-colors disabled:opacity-50"
+                        >
+                          إلغاء
+                        </button>
+                      </div>
+                    </form>
+                  ) : (
+                    <form onSubmit={handleVerifyAndUpdatePassword} className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-bold text-gray-900 mb-2 text-center">
+                          أدخل رمز التحقق (8 أرقام)
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={otp}
+                          onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 8))}
+                          className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none text-center text-2xl tracking-[0.5em] font-mono"
+                          dir="ltr"
+                          placeholder="••••••••"
+                          maxLength={8}
+                        />
+                      </div>
+                      
+                      <div className="flex gap-3 pt-2">
+                        <button
+                          type="submit"
+                          disabled={loading || otp.length !== 8}
+                          className="flex-1 flex justify-center items-center gap-2 py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                        >
+                          {loading ? (
+                            <Loader2 size={20} className="animate-spin" />
+                          ) : (
+                            <>
+                              تأكيد وتغيير
+                              <CheckCircle2 size={18} />
+                            </>
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={cancelPasswordChange}
+                          disabled={loading}
+                          className="px-4 py-3 bg-white border border-gray-200 text-gray-700 rounded-xl font-bold hover:bg-gray-50 transition-colors disabled:opacity-50"
+                        >
+                          إلغاء
+                        </button>
+                      </div>
+                      
+                      <div className="text-center mt-2">
+                        <button 
+                          type="button" 
+                          onClick={() => handleSendOtp()}
+                          disabled={loading || cooldown > 0}
+                          className="text-sm font-bold text-indigo-600 hover:text-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {cooldown > 0 ? `إعادة الإرسال (${cooldown})` : 'إعادة إرسال الكود'}
+                        </button>
+                      </div>
+                    </form>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
