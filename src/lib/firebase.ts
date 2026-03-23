@@ -18,7 +18,7 @@ export const doc = (dbOrColl: any, nameOrId?: string, id?: string) => {
   return { type: 'doc', collection: nameOrId, id: id || generateId() };
 };
 
-const API_URL = import.meta.env.VITE_API_URL || '';
+const API_URL = '';
 
 export const getDoc = async (docRef: any) => {
   const res = await fetch(`${API_URL}/api/firestore/${docRef.collection}/${docRef.id}`);

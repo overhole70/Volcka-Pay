@@ -32,7 +32,7 @@ export const Register: React.FC = () => {
     try {
       // Check if user exists in our database first
       try {
-        const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/firestore/users`);
+        const res = await fetch(`/api/firestore/users`);
         const users = await res.json();
         const userExists = users.some((u: any) => u.email === email);
         if (userExists) {
