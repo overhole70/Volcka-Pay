@@ -15,19 +15,35 @@ export const ResetPassword = () => {
     try {
       // Read the URL hash
       const hash = window.location.hash;
+      console.log("Reset Password Hash:", hash);
       
       if (!hash) {
         setErrorMsg('رابط غير صالح أو منتهي الصلاحية. يرجى طلب رابط جديد.');
         return;
       }
 
-      // Extract access_token and type
+      // Extract access_token and refresh_token
       const hashParams = new URLSearchParams(hash.substring(1));
       const type = hashParams.get('type');
       const accessToken = hashParams.get('access_token');
+      const refreshToken = hashParams.get('refresh_token');
 
       if (type !== 'recovery' || !accessToken) {
         setErrorMsg('رابط غير صالح أو منتهي الصلاحية. يرجى طلب رابط جديد.');
+        return;
+      }
+
+      // Initialize Supabase session manually
+      if (accessToken && refreshToken) {
+        supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken
+        }).then(({ error }) => {
+          if (error) {
+            console.error("Error setting session:", error);
+            setErrorMsg('حدث خطأ أثناء تهيئة الجلسة.');
+          }
+        });
       }
     } catch (err) {
       console.error("Error parsing hash:", err);
@@ -63,84 +79,80 @@ export const ResetPassword = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8" dir="rtl">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="flex justify-center">
+    <div className="min-h-screen bg-gray-50 flex justify-center items-center p-4" dir="rtl">
+      <div className="w-[90%] max-w-[400px] bg-white p-6 sm:p-8 rounded-2xl shadow-xl shadow-gray-100 border border-gray-100">
+        <div className="flex justify-center mb-6">
           <div className="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-indigo-200">
             <Key size={32} />
           </div>
         </div>
-        <h2 className="mt-6 text-center text-3xl font-black text-gray-900">
+        <h2 className="text-center text-2xl font-black text-gray-900 mb-8">
           إعادة تعيين كلمة المرور
         </h2>
-      </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-4 shadow-xl shadow-gray-100 sm:rounded-3xl sm:px-10 border border-gray-100">
-          {errorMsg ? (
-            <div className="text-center space-y-6">
-              <div className="flex justify-center">
-                <AlertCircle className="w-16 h-16 text-red-500" />
-              </div>
-              <p className="text-gray-900 font-bold">{errorMsg}</p>
-              <Link
-                to="/login"
-                className="w-full flex justify-center items-center gap-2 py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition-all"
-              >
-                العودة لتسجيل الدخول
-              </Link>
+        {errorMsg ? (
+          <div className="text-center space-y-6">
+            <div className="flex justify-center">
+              <AlertCircle className="w-16 h-16 text-red-500" />
             </div>
-          ) : (
-            <form className="space-y-6" onSubmit={handleReset}>
-              <div>
-                <label className="block text-sm font-bold text-gray-900 mb-2">
-                  كلمة المرور الجديدة
-                </label>
-                <input
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
-                  dir="ltr"
-                  placeholder="••••••••"
-                  minLength={6}
-                />
-              </div>
+            <p className="text-gray-900 font-bold">{errorMsg}</p>
+            <Link
+              to="/login"
+              className="w-full flex justify-center items-center gap-2 py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition-all"
+            >
+              العودة لتسجيل الدخول
+            </Link>
+          </div>
+        ) : (
+          <form className="space-y-5" onSubmit={handleReset}>
+            <div>
+              <label className="block text-sm font-bold text-gray-900 mb-2">
+                كلمة المرور الجديدة
+              </label>
+              <input
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
+                dir="ltr"
+                placeholder="••••••••"
+                minLength={6}
+              />
+            </div>
 
-              <div>
-                <label className="block text-sm font-bold text-gray-900 mb-2">
-                  تأكيد كلمة المرور
-                </label>
-                <input
-                  type="password"
-                  required
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
-                  dir="ltr"
-                  placeholder="••••••••"
-                  minLength={6}
-                />
-              </div>
+            <div>
+              <label className="block text-sm font-bold text-gray-900 mb-2">
+                تأكيد كلمة المرور
+              </label>
+              <input
+                type="password"
+                required
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
+                dir="ltr"
+                placeholder="••••••••"
+                minLength={6}
+              />
+            </div>
 
-              <button
-                type="submit"
-                disabled={loading || !password || !confirmPassword}
-                className="w-full flex justify-center items-center gap-2 py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-              >
-                {loading ? (
-                  <Loader2 size={20} className="animate-spin" />
-                ) : (
-                  <>
-                    تأكيد
-                    <ArrowRight size={20} />
-                  </>
-                )}
-              </button>
-            </form>
-          )}
-        </div>
+            <button
+              type="submit"
+              disabled={loading || !password || !confirmPassword}
+              className="w-full flex justify-center items-center gap-2 py-3 px-4 mt-2 border border-transparent rounded-xl shadow-sm text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            >
+              {loading ? (
+                <Loader2 size={20} className="animate-spin" />
+              ) : (
+                <>
+                  تأكيد
+                  <ArrowRight size={20} />
+                </>
+              )}
+            </button>
+          </form>
+        )}
       </div>
     </div>
   );
