@@ -24,27 +24,24 @@ export const ResetPassword = () => {
 
       // Extract access_token and refresh_token
       const hashParams = new URLSearchParams(hash.substring(1));
-      const type = hashParams.get('type');
       const accessToken = hashParams.get('access_token');
       const refreshToken = hashParams.get('refresh_token');
 
-      if (type !== 'recovery' || !accessToken) {
+      if (!accessToken) {
         setErrorMsg('رابط غير صالح أو منتهي الصلاحية. يرجى طلب رابط جديد.');
         return;
       }
 
       // Initialize Supabase session manually
-      if (accessToken && refreshToken) {
-        supabase.auth.setSession({
-          access_token: accessToken,
-          refresh_token: refreshToken
-        }).then(({ error }) => {
-          if (error) {
-            console.error("Error setting session:", error);
-            setErrorMsg('حدث خطأ أثناء تهيئة الجلسة.');
-          }
-        });
-      }
+      supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken || ''
+      }).then(({ error }) => {
+        if (error) {
+          console.error("Error setting session:", error);
+          setErrorMsg('حدث خطأ أثناء تهيئة الجلسة.');
+        }
+      });
     } catch (err) {
       console.error("Error parsing hash:", err);
       setErrorMsg('حدث خطأ أثناء قراءة الرابط.');
@@ -79,13 +76,14 @@ export const ResetPassword = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex justify-center items-center p-4" dir="rtl">
-      <div className="w-[90%] max-w-[400px] bg-white p-6 sm:p-8 rounded-2xl shadow-xl shadow-gray-100 border border-gray-100">
+    <div className="min-h-screen flex justify-center items-center bg-gray-50 p-4" dir="rtl">
+      <div className="w-[90%] max-w-[400px] h-auto p-6 bg-white rounded-2xl shadow-sm border border-gray-100">
         <div className="flex justify-center mb-6">
-          <div className="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-indigo-200">
+          <div className="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-md shadow-indigo-200">
             <Key size={32} />
           </div>
         </div>
+        
         <h2 className="text-center text-2xl font-black text-gray-900 mb-8">
           إعادة تعيين كلمة المرور
         </h2>
@@ -104,7 +102,7 @@ export const ResetPassword = () => {
             </Link>
           </div>
         ) : (
-          <form className="space-y-5" onSubmit={handleReset}>
+          <form className="space-y-6" onSubmit={handleReset}>
             <div>
               <label className="block text-sm font-bold text-gray-900 mb-2">
                 كلمة المرور الجديدة
@@ -140,7 +138,7 @@ export const ResetPassword = () => {
             <button
               type="submit"
               disabled={loading || !password || !confirmPassword}
-              className="w-full flex justify-center items-center gap-2 py-3 px-4 mt-2 border border-transparent rounded-xl shadow-sm text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              className="w-full flex justify-center items-center gap-2 py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
               {loading ? (
                 <Loader2 size={20} className="animate-spin" />
