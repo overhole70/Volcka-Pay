@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { db, collection, addDoc, doc, getDoc } from '../lib/firebase';
-import { Wallet, Copy, CheckCircle2, Clock, Upload } from 'lucide-react';
+import { Wallet, Copy, CheckCircle2, Clock, Upload, ArrowRightLeft, User, ArrowRight } from 'lucide-react';
 import { OTPModal } from '../components/OTPModal';
 
 export const Deposit: React.FC = () => {
@@ -13,6 +13,7 @@ export const Deposit: React.FC = () => {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
   const [showOTP, setShowOTP] = useState(false);
+  const [selectedMethod, setSelectedMethod] = useState<'binance' | 'id' | null>(null);
 
   const [formData, setFormData] = useState({
     binanceName: '',
@@ -156,51 +157,115 @@ export const Deposit: React.FC = () => {
             سنقوم بمراجعة طلبك وإضافة المبلغ إلى رصيدك في أقرب وقت ممكن.
           </p>
           <button
-            onClick={() => setSuccess(false)}
+            onClick={() => { setSuccess(false); setSelectedMethod(null); }}
             className="bg-emerald-600 text-white px-8 py-3 rounded-2xl font-bold hover:bg-emerald-700 transition-colors"
           >
             إيداع جديد
           </button>
         </div>
+      ) : !selectedMethod ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <button
+            onClick={() => setSelectedMethod('binance')}
+            className="flex items-center p-6 bg-white border border-gray-100 rounded-3xl shadow-sm hover:shadow-md hover:border-gray-200 transition-all text-right group"
+          >
+            <div className="w-14 h-14 bg-yellow-50 rounded-full flex items-center justify-center text-yellow-600 ml-4 group-hover:scale-110 transition-transform shrink-0">
+              <Wallet size={28} />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-gray-900 mb-1">الإيداع عبر Binance</h3>
+              <p className="text-gray-500 text-sm font-medium">تحويل الأموال من حساب Binance</p>
+            </div>
+          </button>
+
+          <button
+            onClick={() => setSelectedMethod('id')}
+            className="flex items-center p-6 bg-white border border-gray-100 rounded-3xl shadow-sm hover:shadow-md hover:border-gray-200 transition-all text-right group"
+          >
+            <div className="w-14 h-14 bg-blue-50 rounded-full flex items-center justify-center text-blue-600 ml-4 group-hover:scale-110 transition-transform shrink-0">
+              <User size={28} />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-gray-900 mb-1">الإيداع عبر ID</h3>
+              <p className="text-gray-500 text-sm font-medium">استلام الأموال من مستخدم داخل النظام (VolckaPay ID)</p>
+            </div>
+          </button>
+        </div>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <button 
+            onClick={() => {
+              setSelectedMethod(null);
+              setShowForm(false);
+            }} 
+            className="mb-2 flex items-center gap-2 text-gray-500 hover:text-gray-900 transition-colors font-medium"
+          >
+            <ArrowRight size={20} />
+            رجوع للخيارات
+          </button>
           <div className="bg-white rounded-3xl p-6 md:p-8 border border-gray-100 shadow-sm">
             <div className="flex items-center gap-4 mb-6">
-              <div className="w-14 h-14 bg-yellow-50 rounded-2xl flex items-center justify-center text-yellow-600">
-                <Wallet size={28} />
+              <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${selectedMethod === 'binance' ? 'bg-yellow-50 text-yellow-600' : 'bg-blue-50 text-blue-600'}`}>
+                {selectedMethod === 'binance' ? <Wallet size={28} /> : <User size={28} />}
               </div>
               <div>
-                <h2 className="text-xl font-bold text-gray-900">إيداع عبر Binance</h2>
-                <p className="text-gray-500 text-sm font-medium">طريقة الإيداع المعتمدة</p>
+                <h2 className="text-xl font-bold text-gray-900">
+                  {selectedMethod === 'binance' ? 'الإيداع عبر Binance' : 'الإيداع عبر ID'}
+                </h2>
+                <p className="text-gray-500 text-sm font-medium">
+                  {selectedMethod === 'binance' ? 'تحويل الأموال من حساب Binance' : 'استلام الأموال من مستخدم داخل النظام (VolckaPay ID)'}
+                </p>
               </div>
             </div>
 
-            <div className="bg-gray-50 rounded-2xl p-6 mb-8 border border-gray-100">
-              <p className="text-gray-900 font-bold mb-4 text-center text-lg">
-                قم بتحويل المبلغ الذي تريد إيداعه بعملة USDT إلى معرف Binance التالي:
-              </p>
-              <div className="flex items-center justify-between gap-4 bg-white p-4 rounded-xl border border-gray-200 overflow-hidden">
-                <span className="font-mono text-xl sm:text-3xl font-black tracking-wider text-gray-900 break-all">{binanceId}</span>
-                <button
-                  onClick={handleCopy}
-                  className="p-3 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors text-gray-700 flex items-center gap-2 shrink-0"
-                >
-                  {copied ? <CheckCircle2 size={20} className="text-emerald-600" /> : <Copy size={20} />}
-                  <span className="font-bold text-sm hidden sm:inline">{copied ? 'تم النسخ' : 'نسخ'}</span>
-                </button>
+            {selectedMethod === 'id' ? (
+              <div className="bg-gray-50 rounded-2xl p-6 mb-8 border border-gray-100 text-center">
+                <p className="text-gray-900 font-bold mb-4 text-lg">
+                  شارك المعرف الخاص بك (VolckaPay ID) لاستلام الأموال:
+                </p>
+                <div className="flex items-center justify-between gap-4 bg-white p-4 rounded-xl border border-gray-200 overflow-hidden">
+                  <span className="font-mono text-xl sm:text-3xl font-black tracking-wider text-gray-900 break-all">{profile?.volckaId}</span>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(profile?.volckaId || '');
+                      setCopied(true);
+                      setTimeout(() => setCopied(false), 2000);
+                    }}
+                    className="p-3 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors text-gray-700 flex items-center gap-2 shrink-0"
+                  >
+                    {copied ? <CheckCircle2 size={20} className="text-emerald-600" /> : <Copy size={20} />}
+                    <span className="font-bold text-sm hidden sm:inline">{copied ? 'تم النسخ' : 'نسخ'}</span>
+                  </button>
+                </div>
               </div>
-            </div>
-
-            {!showForm ? (
-              <button
-                onClick={() => setShowForm(true)}
-                className="w-full bg-gray-900 text-white py-4 rounded-2xl font-bold text-lg hover:bg-gray-800 transition-colors flex items-center justify-center gap-2"
-              >
-                <Upload size={20} />
-                إرسال
-              </button>
             ) : (
-              <form onSubmit={handleDepositInitiate} className="space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <>
+                <div className="bg-gray-50 rounded-2xl p-6 mb-8 border border-gray-100">
+                  <p className="text-gray-900 font-bold mb-4 text-center text-lg">
+                    قم بتحويل المبلغ الذي تريد إيداعه بعملة USDT إلى معرف Binance التالي:
+                  </p>
+                  <div className="flex items-center justify-between gap-4 bg-white p-4 rounded-xl border border-gray-200 overflow-hidden">
+                    <span className="font-mono text-xl sm:text-3xl font-black tracking-wider text-gray-900 break-all">{binanceId}</span>
+                    <button
+                      onClick={handleCopy}
+                      className="p-3 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors text-gray-700 flex items-center gap-2 shrink-0"
+                    >
+                      {copied ? <CheckCircle2 size={20} className="text-emerald-600" /> : <Copy size={20} />}
+                      <span className="font-bold text-sm hidden sm:inline">{copied ? 'تم النسخ' : 'نسخ'}</span>
+                    </button>
+                  </div>
+                </div>
+
+                {!showForm ? (
+                  <button
+                    onClick={() => setShowForm(true)}
+                    className="w-full bg-gray-900 text-white py-4 rounded-2xl font-bold text-lg hover:bg-gray-800 transition-colors flex items-center justify-center gap-2"
+                  >
+                    <Upload size={20} />
+                    إرسال
+                  </button>
+                ) : (
+                  <form onSubmit={handleDepositInitiate} className="space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <div className="pt-4 border-t border-gray-100">
                   <h3 className="text-lg font-bold text-gray-900 mb-6">تفاصيل التحويل</h3>
                   
@@ -269,6 +334,8 @@ export const Deposit: React.FC = () => {
                 </div>
               </form>
             )}
+            </>
+          )}
           </div>
         </div>
       )}
